@@ -31,7 +31,9 @@ from .mock import ListConnectorAuditSink
 AUDIUS_API_HOST = "api.audius.co"
 AUDIUS_TIMEOUT_SECONDS = 5.0
 MAX_AUDIO_BYTES = 8 * 1024 * 1024
+MAX_AUDIO_REDIRECTS = 3
 MAX_PLAYLIST_TRACKS = 500
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 DEFAULT_PLAYLIST_CONFIG = Path("data/audius_playlists.local.json")
 DEFAULT_SEED_CONFIG = Path(
     "data/music/seeds/audius_mood_playlist_20_tracks.resolved.json"
@@ -592,14 +594,7 @@ class AudiusMusicConnector:
         try:
             metadata = self._fetch_metadata(provider_track_id)
             self._validate_metadata(metadata, provider_track_id)
-            content_url = self._fetch_stream_url(provider_track_id)
-            target = validate_content_url(content_url, resolver=self.resolver)
-            response = self.transport.fetch_content(
-                target,
-                {"Accept": "audio/*", "User-Agent": "Spark-Demo/AudiusPreview"},
-                AUDIUS_TIMEOUT_SECONDS,
-                MAX_AUDIO_BYTES,
-            )
+            response = self._fetch_stream_audio(provider_track_id)
             self._validate_audio_response(response)
             self.decoder(response.body)
             latency_ms = max(0, round((time.monotonic() - started) * 1000))
@@ -645,24 +640,109 @@ class AudiusMusicConnector:
         )
         return self._decode_api_json(response, "AUDIUS_METADATA")
 
-    def _fetch_stream_url(self, provider_track_id: str) -> str:
+    def _fetch_stream_audio(self, provider_track_id: str) -> HTTPResponse:
         track = urllib.parse.quote(provider_track_id, safe="")
         query = self._api_query(
             {"preview": "true", "no_redirect": "true"}
         )
+        request_target = f"/v1/tracks/{track}/stream?{query}"
+
         response = self.transport.fetch_api(
-            f"/v1/tracks/{track}/stream?{query}",
+            request_target,
             self._api_headers(),
             AUDIUS_TIMEOUT_SECONDS,
-            MAX_RESPONSE_BYTES,
+            MAX_AUDIO_BYTES,
         )
+        content_type = _content_type(response.headers)
+        base_url = f"https://{AUDIUS_API_HOST}{request_target}"
+
+        if response.status == 200 and content_type in _AUDIO_CONTENT_TYPES:
+            return response
+
+        if response.status in _REDIRECT_STATUSES:
+            return self._fetch_content_with_redirects(
+                response.headers.get("location", ""),
+                base_url=base_url,
+            )
+
+        if response.status != 200:
+            raise AudiusConnectorError(
+                f"AUDIUS_STREAM_HTTP_{response.status}",
+                request_sent=True,
+            )
+
         decoded = self._decode_api_json(response, "AUDIUS_STREAM")
         data = decoded.get("data")
+
         if isinstance(data, str):
-            return data
-        if isinstance(data, Mapping) and isinstance(data.get("url"), str):
-            return str(data["url"])
-        raise AudiusConnectorError("AUDIUS_STREAM_SCHEMA_REJECTED", request_sent=True)
+            content_url = data
+        elif isinstance(data, Mapping) and isinstance(data.get("url"), str):
+            content_url = str(data["url"])
+        else:
+            raise AudiusConnectorError(
+                "AUDIUS_STREAM_SCHEMA_REJECTED",
+                request_sent=True,
+            )
+
+        return self._fetch_content_with_redirects(
+            content_url,
+            base_url=base_url,
+        )
+
+    def _fetch_content_with_redirects(
+        self,
+        url: str,
+        *,
+        base_url: str,
+    ) -> HTTPResponse:
+        if not isinstance(url, str) or not url.strip():
+            raise AudiusConnectorError(
+                "AUDIUS_CONTENT_REDIRECT_REJECTED",
+                request_sent=True,
+            )
+
+        current_url = urllib.parse.urljoin(base_url, url.strip())
+
+        for redirect_count in range(MAX_AUDIO_REDIRECTS + 1):
+            target = validate_content_url(
+                current_url,
+                resolver=self.resolver,
+            )
+            response = self.transport.fetch_content(
+                target,
+                {
+                    "Accept": "audio/*",
+                    "User-Agent": "Spark-Demo/AudiusPreview",
+                },
+                AUDIUS_TIMEOUT_SECONDS,
+                MAX_AUDIO_BYTES,
+            )
+
+            if response.status not in _REDIRECT_STATUSES:
+                return response
+
+            if redirect_count >= MAX_AUDIO_REDIRECTS:
+                raise AudiusConnectorError(
+                    "AUDIUS_CONTENT_REDIRECT_LIMIT",
+                    request_sent=True,
+                )
+
+            location = response.headers.get("location", "").strip()
+            if not location:
+                raise AudiusConnectorError(
+                    "AUDIUS_CONTENT_REDIRECT_REJECTED",
+                    request_sent=True,
+                )
+
+            current_url = urllib.parse.urljoin(
+                f"https://{target.hostname}{target.request_target}",
+                location,
+            )
+
+        raise AudiusConnectorError(
+            "AUDIUS_CONTENT_REDIRECT_LIMIT",
+            request_sent=True,
+        )
 
     @staticmethod
     def _decode_api_json(response: HTTPResponse, prefix: str) -> Mapping[str, Any]:

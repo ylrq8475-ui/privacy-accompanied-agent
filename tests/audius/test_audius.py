@@ -445,6 +445,136 @@ class AudiusConnectorTests(unittest.TestCase):
             {"action": "play", "track_id": "emotion_relax_01"},
         )
 
+    def test_direct_stream_audio_and_validated_redirect_chain(self) -> None:
+        class DirectAudioTransport(FakeAudiusTransport):
+            def fetch_api(
+                self,
+                request_target: str,
+                headers: dict[str, str],
+                timeout_seconds: float,
+                max_bytes: int,
+            ) -> HTTPResponse:
+                if "/stream?" in request_target:
+                    self.api_calls.append(
+                        (
+                            request_target,
+                            dict(headers),
+                            timeout_seconds,
+                            max_bytes,
+                        )
+                    )
+                    return HTTPResponse(
+                        200,
+                        {
+                            "content-type": "audio/mpeg",
+                            "content-length": "15",
+                        },
+                        b"synthetic-audio",
+                    )
+                return super().fetch_api(
+                    request_target,
+                    headers,
+                    timeout_seconds,
+                    max_bytes,
+                )
+
+        direct_transport = DirectAudioTransport()
+        direct_preview = self.make_connector(
+            direct_transport
+        ).fetch_preview(
+            connector_request(),
+            "D7KyD",
+        )
+
+        self.assertEqual(direct_preview.audio, b"synthetic-audio")
+        self.assertEqual(direct_transport.content_calls, [])
+
+        class RedirectTransport(FakeAudiusTransport):
+            def fetch_api(
+                self,
+                request_target: str,
+                headers: dict[str, str],
+                timeout_seconds: float,
+                max_bytes: int,
+            ) -> HTTPResponse:
+                if "/stream?" in request_target:
+                    self.api_calls.append(
+                        (
+                            request_target,
+                            dict(headers),
+                            timeout_seconds,
+                            max_bytes,
+                        )
+                    )
+                    return HTTPResponse(
+                        307,
+                        {
+                            "location": (
+                                "https://content.example/first.mp3"
+                            )
+                        },
+                        b"",
+                    )
+                return super().fetch_api(
+                    request_target,
+                    headers,
+                    timeout_seconds,
+                    max_bytes,
+                )
+
+            def fetch_content(
+                self,
+                target: ValidatedContentTarget,
+                headers: dict[str, str],
+                timeout_seconds: float,
+                max_bytes: int,
+            ) -> HTTPResponse:
+                self.content_calls.append(
+                    (
+                        target,
+                        dict(headers),
+                        timeout_seconds,
+                        max_bytes,
+                    )
+                )
+
+                if len(self.content_calls) == 1:
+                    return HTTPResponse(
+                        307,
+                        {"location": "/final.mp3"},
+                        b"",
+                    )
+
+                return HTTPResponse(
+                    200,
+                    {
+                        "content-type": "audio/mpeg",
+                        "content-length": "15",
+                    },
+                    b"synthetic-audio",
+                )
+
+        redirect_transport = RedirectTransport()
+        redirect_preview = self.make_connector(
+            redirect_transport
+        ).fetch_preview(
+            connector_request(),
+            "D7KyD",
+        )
+
+        self.assertEqual(
+            redirect_preview.audio,
+            b"synthetic-audio",
+        )
+        self.assertEqual(len(redirect_transport.content_calls), 2)
+        self.assertEqual(
+            redirect_transport.content_calls[1][0].request_target,
+            "/final.mp3",
+        )
+        for _, headers, _, _ in redirect_transport.content_calls:
+            self.assertNotIn("Authorization", headers)
+            self.assertNotIn("api_key", str(headers))
+
     def test_http_failures_timeout_and_metadata_policy_reject(self) -> None:
         for status in (401, 403, 429, 500, 503):
             with self.subTest(status=status):
@@ -498,7 +628,10 @@ class AudiusConnectorTests(unittest.TestCase):
     def test_content_type_size_redirect_and_decode_fail_closed(self) -> None:
         transport = FakeAudiusTransport()
         transport.stream_status = 302
-        with self.assertRaisesRegex(AudiusConnectorError, "AUDIUS_STREAM_HTTP_302"):
+        with self.assertRaisesRegex(
+            AudiusConnectorError,
+            "AUDIUS_CONTENT_REDIRECT_REJECTED",
+        ):
             self.make_connector(transport).fetch_preview(connector_request(), "D7KyD")
         self.assertEqual(transport.content_calls, [])
 
