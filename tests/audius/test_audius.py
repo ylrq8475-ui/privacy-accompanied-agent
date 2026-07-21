@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import io
 import socket
@@ -428,12 +429,19 @@ class AudiusConnectorTests(unittest.TestCase):
         preview = connector.fetch_preview(connector_request(), "D7KyD")
 
         self.assertEqual(preview.provider_track_id, "D7KyD")
+        self.assertEqual(len(transport.content_calls), 1)
+        _, headers, timeout, limit = transport.content_calls[0]
         self.assertNotIn("Authorization", headers)
         self.assertNotIn("api_key", str(headers))
         self.assertEqual(timeout, AUDIUS_TIMEOUT_SECONDS)
         self.assertEqual(limit, MAX_AUDIO_BYTES)
+        self.assertEqual(len(connector.sent_requests), 2)
         self.assertEqual(
             connector.sent_requests[0].payload,
+            {"action": "sync_playlist", "playlist_ref": "RELAX"},
+        )
+        self.assertEqual(
+            connector.sent_requests[1].payload,
             {"action": "play", "track_id": "emotion_relax_01"},
         )
 
@@ -590,6 +598,31 @@ class AudiusOrchestrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
 
+        self.music_root = Path(self.temporary.name) / "music"
+        tracks_dir = self.music_root / "tracks"
+        tracks_dir.mkdir(parents=True, exist_ok=True)
+
+        fallback_asset = tracks_dir / "calm_piano_01.flac"
+        fallback_asset.write_bytes(b"synthetic-local-fallback-audio")
+
+        digest = hashlib.sha256(fallback_asset.read_bytes()).hexdigest()
+        catalog = {
+            "tracks": [
+                {
+                    "track_id": "calm_piano_01",
+                    "path": "tracks/calm_piano_01.flac",
+                    "category": "test",
+                    "license": "SYNTHETIC_TEST_ONLY",
+                    "sha256": digest,
+                    "duration_seconds": 0,
+                }
+            ]
+        }
+        (self.music_root / "catalog.json").write_text(
+            json.dumps(catalog, indent=2),
+            encoding="utf-8",
+        )
+
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
@@ -615,7 +648,7 @@ class AudiusOrchestrationTests(unittest.TestCase):
             catalog.replace_snapshot(
                 CatalogSnapshotRequest(
                     playlist_key=PlaylistKey.RELAX,
-                    playlist_id="verified-seed",
+                    playlist_id="verifiedseed",
                     track_ids=list(seed_track_ids),
                     source_count=len(seed_track_ids),
                     truncated=False,
@@ -627,7 +660,7 @@ class AudiusOrchestrationTests(unittest.TestCase):
             live_connector=RealExternalConnector(
                 transport=FakeWeatherTransport(), clock=FixedClock()
             ),
-            live_music=LocalMusicPlayer(backend=backend),
+            live_music=LocalMusicPlayer(self.music_root, backend=backend),
             live_audius=audius,
             track_catalog=catalog,
         )
