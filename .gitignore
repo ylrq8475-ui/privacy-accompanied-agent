@@ -40,3 +40,10 @@ Thumbs.db
 # Audio assets limited to the local Spark competition Demo
 # Source and public redistribution license are not verified.
 data/music/tracks/*.flac
+
+# DGX deployment-generated state files
+deployed-image.txt
+deployment-verification.json
+model-state-before.txt
+model-state-after.txt
+previous-image.txt
