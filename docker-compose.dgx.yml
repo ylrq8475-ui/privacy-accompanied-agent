@@ -1,0 +1,142 @@
+services:
+  external-connector:
+    image: ${SPARK_DEMO_IMAGE:-spark-active-companion-demo:local}
+    command:
+      - python
+      - -m
+      - uvicorn
+      - external_connector.service:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8030"
+      - --workers
+      - "1"
+    environment:
+      SPARK_AUDIUS_ENABLED: ${SPARK_AUDIUS_ENABLED:-false}
+      SPARK_AUDIUS_PLAYLIST_CONFIG: /run/config/audius_playlists.local.json
+      SPARK_AUDIUS_API_KEY_FILE: /run/secrets/audius_api_key
+      SPARK_AUDIUS_BEARER_TOKEN_FILE: /run/secrets/audius_bearer_token
+    networks:
+      - demo-private
+      - demo-egress
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8030/health', timeout=2).read()
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+  track-catalog:
+    image: ${SPARK_DEMO_IMAGE:-spark-active-companion-demo:local}
+    command:
+      - python
+      - -m
+      - uvicorn
+      - track_catalog.api:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8011"
+      - --workers
+      - "1"
+    environment:
+      SPARK_CATALOG_PATH: /var/lib/spark-demo/audius_catalog.sqlite3
+    volumes:
+      - catalog-state:/var/lib/spark-demo
+    networks:
+      - demo-private
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8011/health', timeout=2).read()
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    restart: unless-stopped
+
+  backend:
+    image: ${SPARK_DEMO_IMAGE:-spark-active-companion-demo:local}
+    command:
+      - python
+      - -m
+      - uvicorn
+      - backend.app.api:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "1"
+    environment:
+      SPARK_DEPLOYMENT_TARGET: DGX_SPARK
+      SPARK_CONSOLE_ACCESS: SSH_LOOPBACK
+      SPARK_DATABASE_PATH: /var/lib/spark-demo/demo.sqlite3
+      SPARK_STEPAUDIO_URL: http://stepaudio:8010
+      SPARK_STEP3_URL: http://step3-vl:8000
+      SPARK_DEMO_SCENE_MEDIA: private
+      SPARK_EXTERNAL_CONNECTOR_URL: http://external-connector:8030
+      SPARK_TRACK_CATALOG_URL: http://track-catalog:8011
+    volumes:
+      - backend-state:/var/lib/spark-demo
+    networks:
+      - companion-private
+      - demo-private
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      external-connector:
+        condition: service_healthy
+      track-catalog:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+networks:
+  companion-private:
+    external: true
+    name: companion-private
+  demo-private:
+    internal: true
+  demo-egress:
+    internal: false
+
+volumes:
+  backend-state:
+  catalog-state:

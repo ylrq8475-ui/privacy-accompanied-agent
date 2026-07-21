@@ -1,0 +1,5 @@
+Asset: calm_piano_01.flac
+Authorization basis: repository owner confirmation in the Phase 4 implementation request.
+Allowed scope: Spark competition Demo.
+Original source: not supplied.
+External license identifier: not independently verified.

@@ -1,0 +1,687 @@
+{
+  "version": 1,
+  "purpose": "preliminary_audius_demo_seed",
+  "generated_at": "2026-07-21T14:50:48.960889+00:00",
+  "source_count": 20,
+  "resolved_count": 17,
+  "failed_count": 3,
+  "tracks": [
+    {
+      "catalog_id": "AUD-MOOD-001",
+      "track_id": "0djMo74",
+      "title": "Joyous Heart in a Happy World",
+      "artist": "Marc Corominas",
+      "genre": "Folk",
+      "audius_mood": "Upbeat",
+      "moods": [
+        "cheerful"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "happy"
+      ],
+      "vocal_type": "instrumental",
+      "retained_from_previous": true,
+      "audius_url": "https://audius.co/musiclfiles/joyous-heart-in-a-happy-world",
+      "review_note": "明亮原声吉他与轻打击乐；适合作为开心状态下的轻音乐。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "UPLIFT"
+      ],
+      "provider_metadata": {
+        "title": "Joyous Heart in a Happy World",
+        "artist": "Marc Corominas",
+        "genre": "Folk",
+        "mood": "Upbeat",
+        "bpm": 141.4,
+        "duration": 187,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-002",
+      "track_id": "NQypp",
+      "title": "Sunny Days",
+      "artist": "Composer Squad",
+      "genre": "Acoustic",
+      "audius_mood": "Excited",
+      "moods": [
+        "cheerful"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "happy"
+      ],
+      "vocal_type": "instrumental",
+      "retained_from_previous": true,
+      "audius_url": "https://audius.co/composersquad/sunny-days",
+      "review_note": "尤克里里、铃声等欢快背景音乐；适合作为开心状态下的轻音乐。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "UPLIFT"
+      ],
+      "provider_metadata": {
+        "title": "Sunny Days",
+        "artist": "Composer Squad",
+        "genre": "Acoustic",
+        "mood": "Excited",
+        "bpm": 97,
+        "duration": 145,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-003",
+      "track_id": "ZaYda",
+      "title": "Peace Sign",
+      "artist": "The Red Coins",
+      "genre": "Pop",
+      "audius_mood": "Upbeat",
+      "moods": [
+        "cheerful"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "happy"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": true,
+      "audius_url": "https://audius.co/theredcoins/peace-sign",
+      "review_note": "保留的 Pop 候选；需试听确认歌词主题、语言和是否含显式内容。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "UPLIFT"
+      ],
+      "provider_metadata": {
+        "title": "Peace Sign",
+        "artist": "The Red Coins",
+        "genre": "Pop",
+        "mood": "Upbeat",
+        "bpm": 115.2,
+        "duration": 226,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-005",
+      "track_id": "NxMy4",
+      "title": "The Light of Day",
+      "artist": "10th Floor Beats",
+      "genre": "Soundtrack",
+      "audius_mood": "Upbeat",
+      "moods": [
+        "cheerful"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "happy",
+        "physically_tired"
+      ],
+      "vocal_type": "instrumental",
+      "retained_from_previous": true,
+      "audius_url": "https://audius.co/Soulmindedmusic/the-light-of-day",
+      "review_note": "钢琴、铃声与积极氛围；可在轻度身体疲惫时作为温和提振。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "UPLIFT"
+      ],
+      "provider_metadata": {
+        "title": "The Light of Day",
+        "artist": "10th Floor Beats ",
+        "genre": "Soundtrack",
+        "mood": "Upbeat",
+        "bpm": 120,
+        "duration": 225,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-006",
+      "track_id": "Zb7d39a",
+      "title": "Rain",
+      "artist": "Chavar Dontae",
+      "genre": "Pop",
+      "audius_mood": "Empowering",
+      "moods": [
+        "uplifting"
+      ],
+      "energy": "high",
+      "contexts": [
+        "physically_tired",
+        "emotionally_low"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/chavardontae/rain",
+      "review_note": "带歌词的流行摇滚励志曲；适合需要明显提振时，睡前不建议。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "COMFORT",
+        "UPLIFT"
+      ],
+      "provider_metadata": {
+        "title": "Rain",
+        "artist": "Chavar Dontae",
+        "genre": "Pop",
+        "mood": "Empowering",
+        "bpm": 147,
+        "duration": 179,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-007",
+      "track_id": "yyXBY",
+      "title": "Born Again",
+      "artist": "Gizmo Varillas",
+      "genre": "Pop",
+      "audius_mood": "Empowering",
+      "moods": [
+        "uplifting"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "physically_tired",
+        "emotionally_low"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/GizmoVarillas/born-again",
+      "review_note": "主题是重新开始和不放弃；适合低落或疲惫后的恢复。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "COMFORT",
+        "UPLIFT"
+      ],
+      "provider_metadata": {
+        "title": "Born Again",
+        "artist": "Gizmo Varillas",
+        "genre": "Pop",
+        "mood": "Empowering",
+        "bpm": 118,
+        "duration": 141,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-009",
+      "track_id": "OvvXpK4",
+      "title": "Healing",
+      "artist": "El Attah",
+      "genre": "Hip-Hop/Rap",
+      "audius_mood": "Tender",
+      "moods": [
+        "calm"
+      ],
+      "energy": "low",
+      "contexts": [
+        "emotionally_low",
+        "lonely"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/Mattnatty/healing",
+      "review_note": "歌词围绕痛苦、平静与恢复；Tender 按规则映射为 calm。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "COMFORT"
+      ],
+      "provider_metadata": {
+        "title": "Healing ",
+        "artist": "El Attah",
+        "genre": "Hip-Hop/Rap",
+        "mood": "Tender",
+        "bpm": 104,
+        "duration": 130,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-010",
+      "track_id": "xkajGQ7",
+      "title": "Only Halfway",
+      "artist": "View Park",
+      "genre": "Pop",
+      "audius_mood": "Sentimental",
+      "moods": [
+        "healing"
+      ],
+      "energy": "low",
+      "contexts": [
+        "emotionally_low",
+        "lonely"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/viewparkrecords/only-halfway",
+      "review_note": "带歌词的情感 Pop；主题涉及失落与音乐作为疗愈方式，需试听确认是否过度压低情绪。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "COMFORT"
+      ],
+      "provider_metadata": {
+        "title": "Only Halfway",
+        "artist": "View Park",
+        "genre": "Pop",
+        "mood": "Sentimental",
+        "bpm": 130,
+        "duration": 135,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-011",
+      "track_id": "BaJjA",
+      "title": "Lonely",
+      "artist": "Nessa Feels",
+      "genre": "Pop",
+      "audius_mood": "Yearning",
+      "moods": [
+        "healing"
+      ],
+      "energy": "low",
+      "contexts": [
+        "lonely",
+        "emotionally_low"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/_nessafeels/lonely",
+      "review_note": "00年代怀旧 Pop，作者明确希望歌曲能给孤独的人带来疗愈。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "COMFORT"
+      ],
+      "provider_metadata": {
+        "title": "Lonely",
+        "artist": "Nessa Feels",
+        "genre": "Pop",
+        "mood": "Yearning",
+        "bpm": 92,
+        "duration": 178,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-012",
+      "track_id": "yN2lx",
+      "title": "Steve Kroeger x Myya - Lonely",
+      "artist": "Steve Kroeger",
+      "genre": "Deep House",
+      "audius_mood": "Melancholy",
+      "moods": [
+        "reflective"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "lonely",
+        "emotionally_low"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/SteveKroeger/steve-kroeger-x-myya-lonely",
+      "review_note": "旋律人声配合忧郁器乐；只作为反思候选，若试听后使情绪进一步下沉则移除。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "COMFORT",
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "Steve Kroeger x Myya - Lonely",
+        "artist": "Steve Kroeger",
+        "genre": "Deep House",
+        "mood": "Melancholy",
+        "bpm": 131.2,
+        "duration": 202,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-014",
+      "track_id": "32YZxaE",
+      "title": "Dreamers In The Night",
+      "artist": "The Blue Book Project",
+      "genre": "Pop",
+      "audius_mood": "Easygoing",
+      "moods": [
+        "calm"
+      ],
+      "energy": "low",
+      "contexts": [
+        "anxious",
+        "calm"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/bluebookproject/dreamers-in-the-night",
+      "review_note": "带歌词的梦幻 Synthpop；适合焦虑后的低刺激过渡。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "Dreamers In The Night",
+        "artist": "The Blue Book Project",
+        "genre": "Pop",
+        "mood": "Easygoing",
+        "bpm": 125,
+        "duration": 199,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-015",
+      "track_id": "9kb194O",
+      "title": "Floating",
+      "artist": "Jijikita",
+      "genre": "Pop",
+      "audius_mood": "Peaceful",
+      "moods": [
+        "calm"
+      ],
+      "energy": "low",
+      "contexts": [
+        "anxious",
+        "calm",
+        "stressed"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/kitaurasyuji1/floating",
+      "review_note": "带歌词和 Vocaloid 人声，整体轻柔并含希望感。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "Floating",
+        "artist": "Jijikita",
+        "genre": "Pop",
+        "mood": "Peaceful",
+        "bpm": 119.1,
+        "duration": 162,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-016",
+      "track_id": "kp8v6Ap",
+      "title": "Peace",
+      "artist": "Viktor Harter",
+      "genre": "Hip-Hop/Rap",
+      "audius_mood": "Peaceful",
+      "moods": [
+        "calm"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "stressed",
+        "angry",
+        "calm"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/ViktorHarter/peace",
+      "review_note": "说唱/演唱结合，歌词强调和平、冥想和挺过困难；用于愤怒状态时不采用攻击性音乐。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "COOLDOWN",
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "Peace",
+        "artist": "Viktor Harter",
+        "genre": "Hip-Hop/Rap",
+        "mood": "Peaceful",
+        "bpm": 135.9,
+        "duration": 232,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-017",
+      "track_id": "NPKVlGx",
+      "title": "Sweeps & luv pug - Multnomah Falls",
+      "artist": "Chillhop Music",
+      "genre": "Lo-Fi",
+      "audius_mood": "Easygoing",
+      "moods": [
+        "calm"
+      ],
+      "energy": "low",
+      "contexts": [
+        "physically_tired",
+        "stressed",
+        "calm"
+      ],
+      "vocal_type": "instrumental",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/chillhopmusic/sweeps-luv-pug-multnomah-falls",
+      "review_note": "舒缓 Lo-Fi 器乐，适合身体疲惫、压力较大或需要安静恢复。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "Sweeps & luv pug - Multnomah Falls",
+        "artist": "Chillhop Music",
+        "genre": "Lo-Fi",
+        "mood": "Easygoing",
+        "bpm": 79,
+        "duration": 123,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-018",
+      "track_id": "5jw17",
+      "title": "Hollywood",
+      "artist": "Composer Squad",
+      "genre": "Hip-Hop/Rap",
+      "audius_mood": "Cool",
+      "moods": [
+        "focused"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "focused"
+      ],
+      "vocal_type": "instrumental",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/composersquad/hollywood-369902",
+      "review_note": "Mellow、positive 的 Chill Hip-Hop 器乐；适合工作或学习。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "Hollywood",
+        "artist": "Composer Squad",
+        "genre": "Hip-Hop/Rap",
+        "mood": "Cool",
+        "bpm": null,
+        "duration": 184,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-019",
+      "track_id": "ZG6Yqq6",
+      "title": "Never Say A Word",
+      "artist": "Tim White",
+      "genre": "Pop",
+      "audius_mood": "Cool",
+      "moods": [
+        "focused"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "focused"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/timwhite/never-say-a-word",
+      "review_note": "Pop + Cool 的带人声候选；需试听确认歌词是否会明显分散注意力。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "Never Say A Word",
+        "artist": "Tim White",
+        "genre": "Pop",
+        "mood": "Cool",
+        "bpm": 95,
+        "duration": 198,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    },
+    {
+      "catalog_id": "AUD-MOOD-020",
+      "track_id": "bv6MO",
+      "title": "What Could I Do",
+      "artist": "CAŁŁEN",
+      "genre": "Pop",
+      "audius_mood": "Cool",
+      "moods": [
+        "focused"
+      ],
+      "energy": "medium",
+      "contexts": [
+        "focused",
+        "stressed"
+      ],
+      "vocal_type": "vocal",
+      "retained_from_previous": false,
+      "audius_url": "https://audius.co/callensounds/what-could-i-do",
+      "review_note": "有完整歌词、偏内省但节奏向前；适合专注候选，需试听确认情绪不过度压抑。",
+      "review_status": "pending_listen",
+      "track_id_resolution": "resolved_from_permalink",
+      "playlist_keys": [
+        "RELAX",
+        "NEUTRAL"
+      ],
+      "provider_metadata": {
+        "title": "What Could I Do ",
+        "artist": "CAŁŁEN",
+        "genre": "Pop",
+        "mood": "Cool",
+        "bpm": 124.1,
+        "duration": 150,
+        "is_streamable": true,
+        "is_unlisted": false,
+        "is_stream_gated": false
+      }
+    }
+  ],
+  "playlist_pools": {
+    "RELAX": [
+      "NxMy4",
+      "Zb7d39a",
+      "yyXBY",
+      "32YZxaE",
+      "9kb194O",
+      "kp8v6Ap",
+      "NPKVlGx",
+      "bv6MO"
+    ],
+    "COMFORT": [
+      "Zb7d39a",
+      "yyXBY",
+      "OvvXpK4",
+      "xkajGQ7",
+      "BaJjA",
+      "yN2lx"
+    ],
+    "UPLIFT": [
+      "0djMo74",
+      "NQypp",
+      "ZaYda",
+      "NxMy4",
+      "Zb7d39a",
+      "yyXBY"
+    ],
+    "COOLDOWN": [
+      "kp8v6Ap"
+    ],
+    "NEUTRAL": [
+      "yN2lx",
+      "32YZxaE",
+      "9kb194O",
+      "kp8v6Ap",
+      "NPKVlGx",
+      "5jw17",
+      "ZG6Yqq6",
+      "bv6MO"
+    ]
+  },
+  "failures": [
+    {
+      "catalog_id": "AUD-MOOD-004",
+      "reason": "ValueError"
+    },
+    {
+      "catalog_id": "AUD-MOOD-008",
+      "reason": "ValueError"
+    },
+    {
+      "catalog_id": "AUD-MOOD-013",
+      "reason": "ValueError"
+    }
+  ]
+}

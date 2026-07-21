@@ -1,0 +1,13 @@
+services:
+  external-connector:
+    environment:
+      SPARK_AUDIUS_ENABLED: "true"
+    volumes:
+      - type: bind
+        source: ${SPARK_AUDIUS_CONFIG_DIR:?set SPARK_AUDIUS_CONFIG_DIR}
+        target: /run/config
+        read_only: true
+      - type: bind
+        source: ${SPARK_AUDIUS_SECRETS_DIR:?set SPARK_AUDIUS_SECRETS_DIR}
+        target: /run/secrets
+        read_only: true

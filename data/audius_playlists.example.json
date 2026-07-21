@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "playlists": {
+    "RELAX": "https://audius.co/<owner>/<relax-playlist>",
+    "COMFORT": "https://audius.co/<owner>/<comfort-playlist>",
+    "UPLIFT": "https://audius.co/<owner>/<uplift-playlist>",
+    "COOLDOWN": "https://audius.co/<owner>/<cooldown-playlist>",
+    "NEUTRAL": "https://audius.co/<owner>/<neutral-playlist>"
+  }
+}

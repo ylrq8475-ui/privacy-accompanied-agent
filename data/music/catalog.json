@@ -1,0 +1,12 @@
+{
+    "tracks": [
+      {
+        "track_id": "calm_piano_01",
+        "path": "tracks/calm_piano_01.flac",
+        "category": "calm_piano",
+        "license": "USER_CONFIRMED_DEMO_USE",
+        "sha256": "5507F5EBC56960E457788501385514510C6300704176CEC6337B28A237E30B75",
+        "duration_seconds": 213.813333
+      }
+    ]
+  }
