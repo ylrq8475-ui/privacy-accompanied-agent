@@ -1,0 +1,9 @@
+services:
+  external-connector:
+    environment:
+      SPARK_AUDIUS_PLAYLIST_CONFIG: /run/config/audius_playlists.local.json
+    volumes:
+      - type: bind
+        source: ${SPARK_AUDIUS_CONFIG_DIR:?set SPARK_AUDIUS_CONFIG_DIR}
+        target: /run/config
+        read_only: true

@@ -43,6 +43,7 @@ $SafeFiles = @(
     ".env.example",
     "docker-compose.dgx.yml",
     "docker-compose.dgx.audius.yml",
+    "docker-compose.dgx.audius-sync.yml",
     "console/index.html",
     "console/package.json",
     "console/package-lock.json",
@@ -50,7 +51,8 @@ $SafeFiles = @(
     "console/tsconfig.app.json",
     "console/tsconfig.node.json",
     "console/vite.config.ts",
-    "data/audius_playlists.example.json"
+    "data/audius_playlists.example.json",
+    "docs/AUDIUS_READ_ONLY.md"
 )
 $ExcludedSegments = @("__pycache__", "node_modules", "dist", ".pytest_cache", ".mypy_cache", ".ruff_cache")
 

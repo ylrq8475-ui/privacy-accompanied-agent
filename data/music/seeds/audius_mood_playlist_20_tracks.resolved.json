@@ -246,7 +246,8 @@
       "review_status": "pending_listen",
       "track_id_resolution": "resolved_from_permalink",
       "playlist_keys": [
-        "COMFORT"
+        "COMFORT",
+        "COOLDOWN"
       ],
       "provider_metadata": {
         "title": "Healing ",
@@ -392,6 +393,7 @@
       "track_id_resolution": "resolved_from_permalink",
       "playlist_keys": [
         "RELAX",
+        "COOLDOWN",
         "NEUTRAL"
       ],
       "provider_metadata": {
@@ -657,6 +659,8 @@
       "yyXBY"
     ],
     "COOLDOWN": [
+      "OvvXpK4",
+      "9kb194O",
       "kp8v6Ap"
     ],
     "NEUTRAL": [

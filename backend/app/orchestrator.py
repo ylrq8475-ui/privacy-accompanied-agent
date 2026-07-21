@@ -1031,7 +1031,7 @@ class Orchestrator:
             playlist_key is not None
             and self.live_audius is not None
             and self.track_catalog is not None
-            and self.live_audius.settings.configured_for(playlist_key)
+            and self.live_audius.settings.preview_ready
         ):
             can_lease = False
             try:
@@ -1046,7 +1046,10 @@ class Orchestrator:
             except TrackCatalogError as error:
                 fallback_reason = error.code
                 category_status = "UNAVAILABLE"
-            if category_status in {"EMPTY", "STALE"}:
+            if (
+                category_status in {"EMPTY", "STALE"}
+                and self.live_audius.settings.configured_for(playlist_key)
+            ):
                 sync_request = self._music_internet_request(
                     now,
                     {
@@ -1476,18 +1479,17 @@ class Orchestrator:
                 )
                 if isinstance(categories, dict):
                     for playlist_key in PlaylistKey:
-                        if playlist_key not in configured:
-                            item = categories.get(playlist_key.value)
-                            if isinstance(item, dict):
-                                item["status"] = "NOT_CONFIGURED"
+                        item = categories.get(playlist_key.value)
+                        if isinstance(item, dict):
+                            item["online_sync_configured"] = (
+                                playlist_key in configured
+                            )
                     configured_statuses = {
                         str(categories[item.value].get("status", "EMPTY"))
                         for item in configured
                         if isinstance(categories.get(item.value), dict)
                     }
-                    if not configured:
-                        catalog["status"] = "NOT_CONFIGURED"
-                    elif configured_statuses == {"READY"}:
+                    if configured_statuses == {"READY"}:
                         catalog["status"] = "READY"
                     elif "DEGRADED" in configured_statuses:
                         catalog["status"] = "DEGRADED"

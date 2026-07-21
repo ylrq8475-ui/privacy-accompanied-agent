@@ -8,7 +8,7 @@ fi
 
 image_tag=$1
 release_dir=$2
-project_name=spark-active-companion-demo
+project_name=${SPARK_COMPOSE_PROJECT_NAME:-spark-active-companion-audius-candidate}
 
 case "$image_tag" in
     spark-active-companion-demo:[a-f0-9][a-f0-9]*) ;;
@@ -32,7 +32,10 @@ model_state() {
 model_state > model-state-before.txt
 
 SPARK_DEMO_IMAGE="$image_tag" \
-docker compose -p "$project_name" -f docker-compose.dgx.yml config --quiet
+docker compose -p "$project_name" \
+    -f docker-compose.dgx.yml \
+    -f docker-compose.dgx.audius.yml \
+    config --quiet
 
 docker build --target test -t "${image_tag}-test" .
 docker run --rm --network none "${image_tag}-test"
@@ -44,7 +47,10 @@ if [ -n "$existing_backend" ]; then
 fi
 
 SPARK_DEMO_IMAGE="$image_tag" \
-docker compose -p "$project_name" -f docker-compose.dgx.yml up \
+docker compose -p "$project_name" \
+    -f docker-compose.dgx.yml \
+    -f docker-compose.dgx.audius.yml \
+    up \
     -d --no-build external-connector track-catalog backend
 
 attempt=0

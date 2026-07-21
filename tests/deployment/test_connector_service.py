@@ -195,12 +195,16 @@ class RemoteConnectorClientTests(unittest.TestCase):
                         "available": True,
                         "status": "CONFIGURED_NOT_PROBED",
                         "latency_ms": 0,
+                        "preview_ready": True,
+                        "sync_ready": True,
+                        "verified_seed_count": 17,
                         "configured_categories": ["RELAX"],
                     }
                 },
             )
         )
         connector = RemoteAudiusConnector(transport=transport)
+        self.assertTrue(connector.settings.preview_ready)
         self.assertTrue(connector.settings.configured_for(PlaylistKey.RELAX))
         self.assertNotIn("api_key", connector.health())
 

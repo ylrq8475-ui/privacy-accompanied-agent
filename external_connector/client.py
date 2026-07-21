@@ -208,6 +208,14 @@ class RemoteAudiusSettings:
     def configured(self) -> bool:
         return bool(self.playlist_urls)
 
+    @property
+    def preview_ready(self) -> bool:
+        return self._owner.health().get("preview_ready") is True
+
+    @property
+    def sync_ready(self) -> bool:
+        return self.configured
+
     def configured_for(self, playlist_key: PlaylistKey) -> bool:
         return playlist_key in self.playlist_urls
 
@@ -246,6 +254,9 @@ class RemoteAudiusConnector:
                 "available": False,
                 "status": "CONNECTOR_UNAVAILABLE",
                 "latency_ms": 0,
+                "preview_ready": False,
+                "sync_ready": False,
+                "verified_seed_count": 0,
                 "configured_categories": [],
             }
         self._last_health = result
