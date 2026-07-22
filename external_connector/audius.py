@@ -33,6 +33,9 @@ AUDIUS_TIMEOUT_SECONDS = 5.0
 MAX_AUDIO_BYTES = 8 * 1024 * 1024
 MAX_PLAYLIST_TRACKS = 500
 DEFAULT_PLAYLIST_CONFIG = Path("data/audius_playlists.local.json")
+DEFAULT_SEED_CONFIG = Path(
+    "data/music/seeds/audius_mood_playlist_20_tracks.resolved.json"
+)
 _TRACK_ID_PATTERN = re.compile(r"^[A-Za-z0-9]{1,64}$")
 _CREDENTIAL_PATTERN = re.compile(r"^[\x21-\x7e]{1,1024}$")
 _DNS_NAME_PATTERN = re.compile(
@@ -114,6 +117,37 @@ def _load_playlist_urls(path: Path) -> dict[PlaylistKey, str]:
     return result
 
 
+def _load_verified_seed_ids(path: Path) -> frozenset[str]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return frozenset()
+    if not isinstance(raw, Mapping) or raw.get("version") != 1:
+        return frozenset()
+    tracks = raw.get("tracks")
+    if not isinstance(tracks, list):
+        return frozenset()
+    result: set[str] = set()
+    for item in tracks:
+        if not isinstance(item, Mapping):
+            return frozenset()
+        track_id = item.get("track_id")
+        metadata = item.get("provider_metadata")
+        if (
+            not isinstance(track_id, str)
+            or not _TRACK_ID_PATTERN.fullmatch(track_id)
+            or item.get("track_id_resolution") != "resolved_from_permalink"
+            or not isinstance(metadata, Mapping)
+            or metadata.get("is_streamable") is not True
+            or metadata.get("is_unlisted") is not False
+            or metadata.get("is_stream_gated") is not False
+            or track_id in result
+        ):
+            return frozenset()
+        result.add(track_id)
+    return frozenset(result)
+
+
 class AudiusConnectorError(RuntimeError):
     """A safe, credential-free failure suitable for fallback reason codes."""
 
@@ -130,6 +164,7 @@ class AudiusSettings:
     bearer_token: str = field(repr=False)
     playlist_urls: Mapping[PlaylistKey, str] = field(repr=False)
     configured: bool
+    verified_seed_ids: frozenset[str] = field(default_factory=frozenset, repr=False)
 
     @classmethod
     def from_environment(
@@ -137,6 +172,7 @@ class AudiusSettings:
         environ: Mapping[str, str] | None = None,
         *,
         config_path: str | Path | None = None,
+        seed_path: str | Path | None = None,
     ) -> "AudiusSettings":
         values = os.environ if environ is None else environ
         enabled = values.get("SPARK_AUDIUS_ENABLED", "").strip().casefold() == "true"
@@ -146,13 +182,43 @@ class AudiusSettings:
             "SPARK_AUDIUS_PLAYLIST_CONFIG", str(DEFAULT_PLAYLIST_CONFIG)
         )
         playlist_urls = _load_playlist_urls(Path(selected_config))
+        selected_seed = seed_path or values.get(
+            "SPARK_AUDIUS_SEED_CONFIG", str(DEFAULT_SEED_CONFIG)
+        )
+        verified_seed_ids = _load_verified_seed_ids(Path(selected_seed))
+        credentials_valid = all(
+            not value or _CREDENTIAL_PATTERN.fullmatch(value)
+            for value in (api_key, bearer_token)
+        )
         configured = bool(
             enabled
-            and _CREDENTIAL_PATTERN.fullmatch(api_key)
-            and _CREDENTIAL_PATTERN.fullmatch(bearer_token)
+            and credentials_valid
             and playlist_urls
         )
-        return cls(enabled, api_key, bearer_token, playlist_urls, configured)
+        return cls(
+            enabled,
+            api_key,
+            bearer_token,
+            playlist_urls,
+            configured,
+            verified_seed_ids,
+        )
+
+    @property
+    def preview_ready(self) -> bool:
+        credentials_valid = all(
+            not value or _CREDENTIAL_PATTERN.fullmatch(value)
+            for value in (self.api_key, self.bearer_token)
+        )
+        return bool(
+            self.enabled
+            and credentials_valid
+            and (self.verified_seed_ids or self.configured)
+        )
+
+    @property
+    def sync_ready(self) -> bool:
+        return self.configured
 
     def configured_for(self, playlist_key: PlaylistKey) -> bool:
         return self.configured and playlist_key in self.playlist_urls
@@ -423,7 +489,13 @@ class AudiusMusicConnector:
         self.resolver = resolver
         self.decoder = decoder
         self.sent_requests = []
-        self._status = "CONFIGURED_NOT_PROBED" if settings.configured else "NOT_CONFIGURED"
+        self._approved_track_ids = set(settings.verified_seed_ids)
+        if settings.preview_ready and settings.sync_ready:
+            self._status = "PREVIEW_AND_SYNC_READY_NOT_PROBED"
+        elif settings.preview_ready:
+            self._status = "SEED_PREVIEW_READY_NOT_PROBED"
+        else:
+            self._status = "NOT_CONFIGURED"
         self._latency_ms = 0
         self._lock = RLock()
 
@@ -431,9 +503,12 @@ class AudiusMusicConnector:
         with self._lock:
             return {
                 "component": "AUDIUS_MUSIC",
-                "available": self.settings.configured,
+                "available": self.settings.preview_ready or self.settings.sync_ready,
                 "status": self._status,
                 "latency_ms": self._latency_ms,
+                "preview_ready": self.settings.preview_ready,
+                "sync_ready": self.settings.sync_ready,
+                "verified_seed_count": len(self.settings.verified_seed_ids),
                 "configured_categories": sorted(
                     item.value for item in self.settings.playlist_urls
                 ),
@@ -460,9 +535,7 @@ class AudiusMusicConnector:
         started = time.monotonic()
         try:
             configured_url = self.settings.playlist_urls[playlist_key]
-            query = urllib.parse.urlencode(
-                {"url": configured_url, "api_key": self.settings.api_key}
-            )
+            query = self._api_query({"url": configured_url})
             response = self.transport.fetch_api(
                 f"/v1/resolve?{query}",
                 self._api_headers(),
@@ -486,6 +559,7 @@ class AudiusMusicConnector:
             self._mark_degraded(started)
             raise
         with self._lock:
+            self._approved_track_ids.update(snapshot.track_ids)
             self._status = "READY"
             self._latency_ms = snapshot.latency_ms
         return snapshot
@@ -495,10 +569,14 @@ class AudiusMusicConnector:
         raw_request: Mapping[str, Any],
         provider_track_id: str,
     ) -> AudiusPreview:
-        if not self.settings.configured:
+        if not self.settings.preview_ready:
             raise AudiusConnectorError("NOT_CONFIGURED", request_sent=False)
         if not _TRACK_ID_PATTERN.fullmatch(provider_track_id):
             raise AudiusConnectorError("AUDIUS_TRACK_ID_REJECTED", request_sent=False)
+        with self._lock:
+            approved_track = provider_track_id in self._approved_track_ids
+        if not approved_track:
+            raise AudiusConnectorError("AUDIUS_TRACK_NOT_APPROVED", request_sent=False)
         approved = self.boundary.prepare(raw_request)
         if approved.destination is not NetworkDestination.PUBLIC_MUSIC_API:
             raise AudiusConnectorError("AUDIUS_DESTINATION_REJECTED", request_sent=False)
@@ -537,17 +615,26 @@ class AudiusMusicConnector:
         return preview
 
     def _api_headers(self) -> dict[str, str]:
-        return {
+        headers = {
             "Accept": "application/json",
-            "Authorization": f"Bearer {self.settings.bearer_token}",
             "User-Agent": "Spark-Demo/AudiusPreview",
         }
+        if self.settings.bearer_token:
+            headers["Authorization"] = f"Bearer {self.settings.bearer_token}"
+        return headers
+
+    def _api_query(self, values: Mapping[str, str]) -> str:
+        query = dict(values)
+        if self.settings.api_key:
+            query["api_key"] = self.settings.api_key
+        return urllib.parse.urlencode(query)
 
     def _fetch_metadata(self, provider_track_id: str) -> Mapping[str, Any]:
         track = urllib.parse.quote(provider_track_id, safe="")
-        query = urllib.parse.urlencode({"api_key": self.settings.api_key})
+        query = self._api_query({})
+        suffix = f"?{query}" if query else ""
         response = self.transport.fetch_api(
-            f"/v1/tracks/{track}?{query}",
+            f"/v1/tracks/{track}{suffix}",
             self._api_headers(),
             AUDIUS_TIMEOUT_SECONDS,
             MAX_RESPONSE_BYTES,
@@ -556,13 +643,7 @@ class AudiusMusicConnector:
 
     def _fetch_stream_url(self, provider_track_id: str) -> str:
         track = urllib.parse.quote(provider_track_id, safe="")
-        query = urllib.parse.urlencode(
-            {
-                "preview": "true",
-                "no_redirect": "true",
-                "api_key": self.settings.api_key,
-            }
-        )
+        query = self._api_query({"preview": "true", "no_redirect": "true"})
         response = self.transport.fetch_api(
             f"/v1/tracks/{track}/stream?{query}",
             self._api_headers(),

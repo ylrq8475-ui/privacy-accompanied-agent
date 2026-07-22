@@ -20,10 +20,21 @@ from backend.app.schemas.step3 import StateLabel
 from backend.app.schemas.events import NetworkScope
 from backend.app.schemas.network import NetworkDestination
 from tests.phase1c.helpers import FixedClock, NOW, proposals
-from tests.phase4.helpers import FakeWeatherTransport, RecordingPlaybackBackend
+from tests.phase4.helpers import (
+    FakeWeatherTransport,
+    RecordingPlaybackBackend,
+    make_synthetic_music_root,
+)
 
 
 class Phase4ActionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.music_root = make_synthetic_music_root(Path(self.temporary.name))
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
     def test_local_ac_mock_payload_is_allowlisted_without_connector(self) -> None:
         result = check_payload(
             NetworkScope.LOCAL,
@@ -39,7 +50,7 @@ class Phase4ActionTests(unittest.TestCase):
 
     def test_local_player_rechecks_approval_expiry_and_duplicate_action(self) -> None:
         backend = RecordingPlaybackBackend()
-        player = LocalMusicPlayer(backend=backend)
+        player = LocalMusicPlayer(self.music_root, backend=backend)
         music, _ = proposals(session_id="session-local-player")
         pending = ActionAuthorization(
             action_id=music.action_id,
@@ -91,7 +102,7 @@ class Phase4ActionTests(unittest.TestCase):
                 live_connector=RealExternalConnector(
                     transport=FakeWeatherTransport(), clock=FixedClock()
                 ),
-                live_music=LocalMusicPlayer(backend=backend),
+                live_music=LocalMusicPlayer(self.music_root, backend=backend),
             )
             session = orchestrator.begin_live_session(
                 perception_source="STATIC_SYNTHETIC", degraded_reasons=[]
@@ -139,7 +150,7 @@ class Phase4ActionTests(unittest.TestCase):
                 live_connector=RealExternalConnector(
                     transport=FakeWeatherTransport(), clock=FixedClock()
                 ),
-                live_music=LocalMusicPlayer(backend=backend),
+                live_music=LocalMusicPlayer(self.music_root, backend=backend),
             )
             session = orchestrator.begin_live_session(
                 perception_source="STATIC_SYNTHETIC", degraded_reasons=[]

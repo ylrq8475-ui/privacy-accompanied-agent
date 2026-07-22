@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -9,6 +10,29 @@ from external_connector.weather import ExternalConnectorTransportError
 REAL_WEATHER_BODY = json.dumps(
     {"current": {"temperature_2m": 25.5, "weather_code": 1}}
 ).encode("utf-8")
+
+
+def make_synthetic_music_root(root: Path) -> Path:
+    """Create a non-played test fixture without shipping unlicensed audio."""
+    music_root = root / "music"
+    track_path = music_root / "tracks" / "calm_piano_01.flac"
+    track_path.parent.mkdir(parents=True, exist_ok=True)
+    track_path.write_bytes(b"synthetic-test-audio-not-for-playback")
+    (music_root / "catalog.json").write_text(
+        json.dumps(
+            {
+                "tracks": [
+                    {
+                        "track_id": "calm_piano_01",
+                        "path": "tracks/calm_piano_01.flac",
+                        "sha256": hashlib.sha256(track_path.read_bytes()).hexdigest(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return music_root
 
 
 class FakeWeatherTransport:

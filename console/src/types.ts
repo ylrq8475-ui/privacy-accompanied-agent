@@ -220,6 +220,33 @@ export interface LiveHealth {
   last_visual_attempt: Record<string, unknown> | null;
 }
 
+export interface MusicCatalogTrack {
+  catalog_id: string;
+  track_id: string;
+  title: string;
+  artist: string;
+  genre: string;
+  audius_mood: string;
+  energy: string;
+  vocal_type: string;
+}
+
+export interface MusicCatalogCategory {
+  key: "RELAX" | "COMFORT" | "UPLIFT" | "COOLDOWN" | "NEUTRAL";
+  status: string;
+  track_count: number;
+  ready_count: number;
+  tracks: MusicCatalogTrack[];
+}
+
+export interface MusicCatalogResponse {
+  source: "BUNDLED_SEED";
+  local_only: true;
+  provider_urls_exposed: false;
+  credentials_exposed: false;
+  categories: MusicCatalogCategory[];
+}
+
 export interface AuditEvent {
   event_id: string;
   session_id: string;

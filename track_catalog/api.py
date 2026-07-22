@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from .contracts import CatalogLeaseRequest, CatalogResultRequest, CatalogSnapshotRequest
+from .seed import DEFAULT_SEED_PATH, public_catalog, seed_store
 from .store import DEFAULT_CATALOG_PATH, CatalogError, CatalogStore
 
 
@@ -19,10 +20,19 @@ MAX_REQUEST_BYTES = 65_536
 
 
 class CatalogASGIApp:
-    def __init__(self, store: CatalogStore | None = None) -> None:
+    def __init__(
+        self,
+        store: CatalogStore | None = None,
+        *,
+        seed_path: str | None = None,
+    ) -> None:
         self.store = store or CatalogStore(
             os.environ.get("SPARK_CATALOG_PATH", str(DEFAULT_CATALOG_PATH))
         )
+        self.seed_path = seed_path or os.environ.get(
+            "SPARK_CATALOG_SEED_PATH", str(DEFAULT_SEED_PATH)
+        )
+        self.seed_summary: dict[str, object] = {"status": "NOT_LOADED"}
 
     async def __call__(
         self,
@@ -39,7 +49,14 @@ class CatalogASGIApp:
         path = str(scope.get("path", "/"))
         try:
             if method == "GET" and path == "/health":
-                await _json_response(send, 200, self.store.health())
+                health = self.store.health()
+                health["seed"] = self.seed_summary
+                await _json_response(send, 200, health)
+                return
+            if method == "GET" and path == "/v1/catalog/public":
+                await _json_response(
+                    send, 200, public_catalog(self.store, self.seed_path)
+                )
                 return
             if method == "PUT" and path == "/v1/catalog/snapshot":
                 request = CatalogSnapshotRequest.model_validate(await _read_json(receive))
@@ -69,6 +86,7 @@ class CatalogASGIApp:
             message = await receive()
             if message["type"] == "lifespan.startup":
                 self.store.initialize()
+                self.seed_summary = seed_store(self.store, self.seed_path)
                 await send({"type": "lifespan.startup.complete"})
             elif message["type"] == "lifespan.shutdown":
                 await send({"type": "lifespan.shutdown.complete"})

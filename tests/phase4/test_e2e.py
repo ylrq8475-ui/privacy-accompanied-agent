@@ -15,13 +15,18 @@ from backend.app.persistence import SQLitePersistence
 from tests.phase1c.helpers import FixedClock
 from tests.phase2.helpers import json_request
 from tests.phase3.helpers import FailingAudio, FailingStep3
-from tests.phase4.helpers import FakeWeatherTransport, RecordingPlaybackBackend
+from tests.phase4.helpers import (
+    FakeWeatherTransport,
+    RecordingPlaybackBackend,
+    make_synthetic_music_root,
+)
 
 
 class Phase4EndToEndTests(unittest.IsolatedAsyncioTestCase):
     async def test_phase4_live_chain_completes_five_out_of_five(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             database = Path(temporary) / "demo.sqlite3"
+            music_root = make_synthetic_music_root(Path(temporary))
             session_ids: list[str] = []
             for sample in range(1, 6):
                 with self.subTest(sample=sample):
@@ -32,7 +37,7 @@ class Phase4EndToEndTests(unittest.IsolatedAsyncioTestCase):
                         live_connector=RealExternalConnector(
                             transport=FakeWeatherTransport(), clock=FixedClock()
                         ),
-                        live_music=LocalMusicPlayer(backend=playback),
+                        live_music=LocalMusicPlayer(music_root, backend=playback),
                     )
                     live = LiveCoordinator(
                         orchestrator,

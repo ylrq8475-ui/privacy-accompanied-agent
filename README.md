@@ -10,7 +10,7 @@
 | StepAudio | 健康接口可达；ASR 缺少明确的共享合成音频时使用文字降级；TTS 仅由用户点击触发，有效 WAV 临时播放，失败时明确降级为 `TEXT_ONLY` |
 | 感知 | 摄像头不可用时使用明确标记的 `STATIC_SYNTHETIC` 降级输入 |
 | 天气 | 通过唯一 INTERNET egress 调用 Open-Meteo，失败时按缓存、固定 Demo 数据降级 |
-| 音乐 | 用户独立授权后优先由 `external-connector` 获取固定 Audius 预览到内存，再由后端所在 DGX 主机执行 LOCAL 播放；不可用时降级到仓库内钢琴素材 |
+| 音乐 | 控制台常驻展示五类、13 首已验证的 Audius 种子目录；只有用户确认情绪并独立授权音乐 Action 后，`external-connector` 才获取固定预览到内存并由 DGX 主机本地播放；在线歌单同步为可选扩展 |
 | AC | 始终是 Mock，不控制物理空调，结果标记 `physical_action_performed=false` |
 | 记忆 | SQLite 只保存显式确认的 Demo 偏好、最多 50 条脱敏情绪摘要、精简动作和脱敏审计 |
 | 恢复 | 重启后协调 Action 状态，但不会自动执行待处理动作 |
@@ -139,16 +139,18 @@ Test-NetConnection 127.0.0.1 -Port 18000
 
 如果曾在聊天、终端历史、截图或前端代码中暴露过 Audius API Key 或 Bearer Token，必须先在 Audius 控制台吊销并轮换；不要继续使用旧凭据。本 Demo 不使用 OAuth 或 Redirect URI，也不会把凭据发送到浏览器。
 
-Audius 是可选能力。LLM 只能建议“情绪匹配音乐”，不能搜索、选择曲目、歌单 URL 或类别。确定性 Policy 将九种确认状态映射到五个固定类别：`RELAX`、`COMFORT`、`UPLIFT`、`COOLDOWN`、`NEUTRAL`。歌单 URL 必须由人工核准，并保存在被 Git 忽略的 `data/audius_playlists.local.json`；目录进程只保存公开 Track ID，不保存凭据、URL 或音频。
+Audius 预览是可选联网能力。LLM 只能建议“情绪匹配音乐”，不能搜索、选择曲目、歌单 URL 或类别。确定性 Policy 将九种确认状态映射到五个固定类别：`RELAX`、`COMFORT`、`UPLIFT`、`COOLDOWN`、`NEUTRAL`。Track Catalog 启动时会幂等导入仓库内 13 首已验证种子曲目，控制台可浏览最小化的标题、作者和分类信息；浏览目录不会联网或播放。只有情绪确认产生音乐 Action、且用户单独批准后，系统才通过唯一联网出口获取被种子清单批准的 Audius 预览。
 
-先复制示例配置，并把需要启用的类别改成人工核准的标准 Audius 歌单 URL（可只配置部分或一次配置很多歌；每类最多收录前 500 个去重 Track ID）：
+在线歌单同步不是种子预览的前置条件。需要扩展曲库时，再使用 `docker-compose.dgx.audius-sync.yml` 配置人工核准的标准 Audius 歌单 URL；目录进程只保存公开 Track ID，不保存凭据、URL 或音频。
+
+可选：复制示例配置，并把需要扩展的类别改成人工核准的标准 Audius 歌单 URL（可只配置部分；每类最多收录前 500 个去重 Track ID）：
 
 ```powershell
 Copy-Item data/audius_playlists.example.json data/audius_playlists.local.json
 notepad data/audius_playlists.local.json
 ```
 
-在启动 Uvicorn 的同一个 PowerShell 会话中使用占位符配置轮换后的凭据：
+可选：在线同步需要凭据时，在 `external-connector` 的部署环境中使用轮换后的凭据：
 
 ```powershell
 $env:SPARK_AUDIUS_ENABLED = "true"
@@ -156,7 +158,7 @@ $env:SPARK_AUDIUS_API_KEY = "<ROTATED_AUDIUS_API_KEY>"
 $env:SPARK_AUDIUS_BEARER_TOKEN = "<ROTATED_AUDIUS_BEARER_TOKEN>"
 ```
 
-不要把这些值写入 `.env`、README、歌单 JSON、目录数据库、前端构建或命令输出。API Key 和 Bearer Token 只存在于后端 `external-connector` 进程；Track Catalog 不接收它们，也没有公网访问能力。本 Demo 不需要 `SPARK_AUDIUS_TRACK_ID`。
+不要把这些值写入 `.env`、README、歌单 JSON、目录数据库、前端构建或命令输出。API Key 和 Bearer Token 只存在于 `external-connector` 进程；Track Catalog 不接收它们，也没有公网访问能力。公开种子预览本身不要求 API Key、Bearer Token 或 `SPARK_AUDIUS_TRACK_ID`。
 
 在第二个 PowerShell 窗口启动独立的本地目录进程：
 
@@ -165,9 +167,9 @@ cd D:\Workshop\Spark
 .\scripts\start_audius_catalog.ps1
 ```
 
-目录固定监听 `127.0.0.1:8011`，使用自己的 `data/audius_catalog.sqlite3`，按类别确定性轮转并对同一 `action_id` 返回相同租约。目录超过 24 小时视为 `STALE`。只有音乐 Action 获批后，后端才会在目录为空或过期时让 `external-connector` 同步歌单；拒绝、过期或错误 Action 不会同步、获取或播放。
+目录固定监听 `127.0.0.1:8011`，使用自己的 `data/audius_catalog.sqlite3`，启动即幂等导入种子目录，按类别确定性轮转并对同一 `action_id` 返回相同租约。只有音乐 Action 获批后才会获取预览；拒绝、过期或错误 Action 不会同步、获取或播放。启用可选在线同步后，目录为空或过期时才会同步人工核准歌单。
 
-任一凭据缺失、类别 URL 缺失/非法或功能未启用时，对应类别为 `NOT_CONFIGURED`，同一个已批准音乐 Action 只回退一次本地钢琴。配置完整但尚未实际同步时为 `CONFIGURED_NOT_PROBED`；`/v1/live/health` 只访问本地目录，绝不会借健康检查访问公网。
+种子清单存在且 Audius 功能启用时，健康状态分别报告 `preview_ready`、`sync_ready` 和种子数量；缺少在线同步凭据不会使种子目录变为 `EMPTY` 或 `NOT_CONFIGURED`。预览失败时，同一个已批准音乐 Action 只尝试一次本地降级；本地降级素材必须另行安装并确认许可，仓库不会提交来源未核验的音频。`/v1/live/health` 只读取本地状态，绝不会借健康检查访问公网。
 
 Audius API Host 固定为 `https://api.audius.co`。预览获取超时 5 秒、不重试、最多 8 MiB，音频只保留在内存，不进入磁盘、SQLite 或缓存。401、403、429、服务错误、非法元数据、受限曲目、不安全内容节点、错误音频类型或解码失败都会在同一个已批准音乐 Action 内降级一次，不会创建第二个 Action，也不会授权 AC。Audius 预览可能受服务端限制；控制台只报告“播放设备已启动”，不把它表述为人耳确认听到。
 
@@ -337,7 +339,7 @@ Python 全套测试：
 python -m unittest discover -s tests
 ```
 
-当前实际结果为 `188/188` 通过（0 失败、0 错误、0 跳过）。其中 Audius 自动化测试为 `13/13`、Track Catalog 为 `7/7`、情绪反应为 `18/18`，覆盖配置、传输安全、真实 `miniaudio` 内存解码、九类到五类映射、目录轮转/幂等/过期、授权门禁、内存播放和本地降级；网络部分使用合成响应与 Mock 传输，不代表真实 Audius 或物理扬声器验收。
+当前 Python 全套测试为 `234/234` 通过，音乐目录、Audius 与连接器定向回归为 `38/38` 通过，覆盖无凭据种子预览、未批准 Track ID 拒绝、可选在线同步、目录启动导入/幂等/轮转、最小化公开目录、授权门禁和内存播放。测试中的本地降级路径使用运行时生成且不会实际播放的合成 fixture，不提交来源未核验的音频；网络部分使用合成响应与 Mock 传输，不代表真实 Audius 或物理扬声器验收。
 
 前端测试和生产构建：
 
@@ -346,9 +348,17 @@ npm --prefix console run test:run
 npm --prefix console run build
 ```
 
-当前前端测试实际结果为 `9/9` 通过，生产构建成功。
+当前前端测试实际结果为 `22/22` 通过，生产构建成功；构建产物已包含常驻音乐推荐面板。
 
-本轮没有读取轮换后的 Audius 运行时凭据，也没有配置人工核准的公开歌单 URL，因此真实 Audius 预览获取为 `0/5`、人工点击实际播放为 `0/1`。不得把自动化 Mock 结果称为真实 Audius 获取或人耳听到。
+本轮没有读取任何 Audius 运行时凭据。13 首种子目录已完成结构和策略自动化验证；四个未通过实际预览筛选的 Track ID 已从清单和全部类别池移除。仍需在 DGX Spark 候选部署中复核 13 首真实 Audius 预览，并至少人工点击播放一次；不得把自动化 Mock 结果称为人耳听到。
+
+DGX Spark 上可从 `external-connector` 所在网络执行 13 首复核；脚本只在内存中校验并丢弃音频，不写入音频文件：
+
+```bash
+python -m scripts.verify_audius_seed_previews \
+  --base-url http://external-connector:8030 \
+  --output /tmp/audius-seed-preview-report.json
+```
 
 本轮还使用配置的真实 Step3 连续执行了 5 次合成端到端尝试；当前环境均返回 `MODEL_UNAVAILABLE`，结果为 `0/5` 成功，且没有批准任何物理动作。因此不能把这 5 次记录为真实模型验收通过。
 

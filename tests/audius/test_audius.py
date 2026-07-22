@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import io
 import socket
 import tempfile
@@ -77,6 +78,7 @@ def configured_settings() -> AudiusSettings:
             PlaylistKey.RELAX: "https://audius.co/demo/relax-playlist"
         },
         configured=True,
+        verified_seed_ids=frozenset({"D7KyD"}),
     )
 
 
@@ -243,6 +245,7 @@ class AudiusConnectorTests(unittest.TestCase):
                     AudiusSettings.from_environment(
                         environment,
                         config_path=Path(self.id() + "-missing.json"),
+                        seed_path=Path(self.id() + "-missing-seeds.json"),
                     ),
                     transport=transport,
                     resolver=public_resolver,
@@ -280,7 +283,11 @@ class AudiusConnectorTests(unittest.TestCase):
     def test_health_never_probes_and_transitions_after_fetch(self) -> None:
         transport = FakeAudiusTransport()
         connector = self.make_connector(transport)
-        self.assertEqual(connector.health()["status"], "CONFIGURED_NOT_PROBED")
+        self.assertEqual(
+            connector.health()["status"], "PREVIEW_AND_SYNC_READY_NOT_PROBED"
+        )
+        self.assertTrue(connector.health()["preview_ready"])
+        self.assertTrue(connector.health()["sync_ready"])
         self.assertEqual(transport.api_calls, [])
         connector.fetch_preview(connector_request(), "D7KyD")
         self.assertEqual(connector.health()["status"], "READY")
@@ -356,6 +363,76 @@ class AudiusConnectorTests(unittest.TestCase):
             connector.sent_requests[0].payload,
             {"action": "play", "track_id": "emotion_relax_01"},
         )
+
+    def test_public_seed_preview_needs_no_credentials_or_playlist_sync(self) -> None:
+        transport = FakeAudiusTransport()
+        settings = AudiusSettings(
+            enabled=True,
+            api_key="",
+            bearer_token="",
+            playlist_urls={},
+            configured=False,
+            verified_seed_ids=frozenset({"D7KyD"}),
+        )
+        connector = AudiusMusicConnector(
+            settings,
+            transport=transport,
+            resolver=public_resolver,
+            decoder=lambda audio: object(),
+        )
+
+        preview = connector.fetch_preview(connector_request(), "D7KyD")
+
+        self.assertEqual(preview.provider_track_id, "D7KyD")
+        self.assertTrue(connector.health()["preview_ready"])
+        self.assertFalse(connector.health()["sync_ready"])
+        self.assertEqual(connector.health()["verified_seed_count"], 1)
+        for target, headers, _, _ in transport.api_calls:
+            self.assertNotIn("api_key=", target)
+            self.assertNotIn("Authorization", headers)
+
+    def test_public_preview_rejects_track_outside_approved_sets(self) -> None:
+        transport = FakeAudiusTransport()
+        connector = AudiusMusicConnector(
+            AudiusSettings(
+                True,
+                "",
+                "",
+                {},
+                False,
+                frozenset({"D7KyD"}),
+            ),
+            transport=transport,
+        )
+
+        with self.assertRaisesRegex(
+            AudiusConnectorError, "AUDIUS_TRACK_NOT_APPROVED"
+        ) as caught:
+            connector.fetch_preview(connector_request(), "otherTrack")
+
+        self.assertFalse(caught.exception.request_sent)
+        self.assertEqual(transport.api_calls, [])
+
+    def test_successful_playlist_sync_approves_returned_track_ids(self) -> None:
+        transport = FakeAudiusTransport()
+        connector = AudiusMusicConnector(
+            AudiusSettings(
+                True,
+                "",
+                "",
+                {PlaylistKey.RELAX: "https://audius.co/demo/relax-playlist"},
+                True,
+                frozenset(),
+            ),
+            transport=transport,
+            resolver=public_resolver,
+            decoder=lambda audio: object(),
+        )
+
+        connector.sync_playlist(sync_request(), PlaylistKey.RELAX)
+        preview = connector.fetch_preview(connector_request(), "D7KyD")
+
+        self.assertEqual(preview.provider_track_id, "D7KyD")
 
     def test_http_failures_timeout_and_metadata_policy_reject(self) -> None:
         for status in (401, 403, 429, 500, 503):
@@ -519,25 +596,57 @@ class AudiusOrchestrationTests(unittest.TestCase):
         backend: RecordingPlaybackBackend,
         *,
         settings: AudiusSettings | None = None,
+        seed_track_ids: tuple[str, ...] = (),
     ) -> tuple[Orchestrator, object]:
         persistence = SQLitePersistence(Path(self.temporary.name) / "demo.sqlite3")
+        music_root = Path(self.temporary.name) / "music"
+        track_path = music_root / "tracks" / "calm_piano_01.flac"
+        track_path.parent.mkdir(parents=True, exist_ok=True)
+        track_path.write_bytes(b"synthetic-local-fallback")
+        (music_root / "catalog.json").write_text(
+            json.dumps(
+                {
+                    "tracks": [
+                        {
+                            "track_id": "calm_piano_01",
+                            "path": "tracks/calm_piano_01.flac",
+                            "sha256": hashlib.sha256(
+                                track_path.read_bytes()
+                            ).hexdigest(),
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
         audius = AudiusMusicConnector(
             settings or configured_settings(),
             transport=transport,
             resolver=public_resolver,
             decoder=lambda audio: object(),
         )
+        track_catalog = InProcessCatalog(
+            Path(self.temporary.name) / "audius_catalog.sqlite3"
+        )
+        if seed_track_ids:
+            track_catalog.replace_snapshot(
+                CatalogSnapshotRequest(
+                    playlist_key=PlaylistKey.RELAX,
+                    playlist_id="SeedRELAXV1",
+                    track_ids=list(seed_track_ids),
+                    source_count=len(seed_track_ids),
+                    truncated=False,
+                )
+            )
         orchestrator = Orchestrator(
             clock=FixedClock(),
             persistence=persistence,
             live_connector=RealExternalConnector(
                 transport=FakeWeatherTransport(), clock=FixedClock()
             ),
-            live_music=LocalMusicPlayer(backend=backend),
+            live_music=LocalMusicPlayer(music_root, backend=backend),
             live_audius=audius,
-            track_catalog=InProcessCatalog(
-                Path(self.temporary.name) / "audius_catalog.sqlite3"
-            ),
+            track_catalog=track_catalog,
         )
         session = orchestrator.begin_live_session(
             perception_source="STATIC_SYNTHETIC", degraded_reasons=[]
@@ -553,6 +662,36 @@ class AudiusOrchestrationTests(unittest.TestCase):
             session.session_id, StateLabel.PHYSICAL_FATIGUE
         )
         return orchestrator, session
+
+    def test_seed_catalog_previews_without_credentials_or_online_sync(self) -> None:
+        transport = FakeAudiusTransport()
+        backend = RecordingPlaybackBackend()
+        settings = AudiusSettings(
+            enabled=True,
+            api_key="",
+            bearer_token="",
+            playlist_urls={},
+            configured=False,
+            verified_seed_ids=frozenset({"D7KyD"}),
+        )
+        orchestrator, session = self.ready_session(
+            transport,
+            backend,
+            settings=settings,
+            seed_track_ids=("D7KyD",),
+        )
+
+        music_id = session.music_action.action_id
+        session = orchestrator.authorize(session.session_id, music_id, True)
+        result = session.results[music_id].result
+
+        self.assertEqual(result["source"], "AUDIUS_PREVIEW")
+        self.assertEqual(backend.memory_payloads, [b"synthetic-audio"])
+        self.assertEqual(len(transport.api_calls), 2)
+        self.assertFalse(any(target.startswith("/v1/resolve?") for target, *_ in transport.api_calls))
+        self.assertFalse(any("api_key=" in target for target, *_ in transport.api_calls))
+        self.assertTrue(orchestrator.live_audius.settings.preview_ready)
+        self.assertFalse(orchestrator.live_audius.settings.sync_ready)
 
     def test_approved_preview_plays_memory_and_keeps_ac_pending(self) -> None:
         transport = FakeAudiusTransport()

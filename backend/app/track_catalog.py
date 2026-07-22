@@ -30,6 +30,7 @@ class TrackCatalogError(RuntimeError):
 
 class TrackCatalog(Protocol):
     def health(self) -> dict[str, object]: ...
+    def public_catalog(self) -> dict[str, object]: ...
     def category_status(self, playlist_key: PlaylistKey) -> str: ...
     def replace_snapshot(self, request: CatalogSnapshotRequest) -> CatalogSnapshotResponse: ...
     def lease(self, request: CatalogLeaseRequest) -> CatalogLeaseResponse: ...
@@ -50,6 +51,9 @@ class TrackCatalogClient:
 
     def health(self) -> dict[str, object]:
         return self._request("GET", "/health", None)
+
+    def public_catalog(self) -> dict[str, object]:
+        return self._request("GET", "/v1/catalog/public", None)
 
     def category_status(self, playlist_key: PlaylistKey) -> str:
         health = self.health()

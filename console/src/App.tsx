@@ -19,6 +19,7 @@ import type {
   PersistedAction,
   SessionSnapshot,
   LiveHealth,
+  MusicCatalogResponse,
   TextAnalysisResponse,
   TextStateLabel,
   UserPreferences,
@@ -244,6 +245,14 @@ const MUSIC_PLAYLISTS: Record<string, { key: string; label: string }> = {
   emotion_uplift_01: { key: "UPLIFT", label: "轻快" },
   emotion_cooldown_01: { key: "COOLDOWN", label: "降温" },
   emotion_neutral_01: { key: "NEUTRAL", label: "中性" },
+};
+
+const MUSIC_CATEGORY_LABELS: Record<string, string> = {
+  RELAX: "放松",
+  COMFORT: "安慰",
+  UPLIFT: "轻快",
+  COOLDOWN: "平复",
+  NEUTRAL: "中性",
 };
 
 type ConsoleView = "chat" | "audit";
@@ -474,6 +483,9 @@ function App() {
   const [textInput, setTextInput] = useState<DemoText>(TEXT_OPTIONS[0]);
   const [livePolling, setLivePolling] = useState(false);
   const [liveHealth, setLiveHealth] = useState<LiveHealth | null>(null);
+  const [musicCatalog, setMusicCatalog] = useState<MusicCatalogResponse | null>(null);
+  const [selectedMusicCategory, setSelectedMusicCategory] = useState("RELAX");
+  const [musicCatalogError, setMusicCatalogError] = useState<string | null>(null);
   const [ttsStatus, setTtsStatus] = useState<string | null>(null);
   const [analysisText, setAnalysisText] = useState("");
   const [selectedCityCode, setSelectedCityCode] = useState<CityCode>("310000");
@@ -605,6 +617,16 @@ function App() {
       })
       .catch(() => {
         // Scene selection remains available even when a health probe is slow.
+      });
+    void api.musicCatalog()
+      .then((catalog) => {
+        if (!cancelled) {
+          setMusicCatalog(catalog);
+          setMusicCatalogError(null);
+        }
+      })
+      .catch((loadError) => {
+        if (!cancelled) setMusicCatalogError(humanError(loadError));
       });
     return () => { cancelled = true; };
   }, []);
@@ -893,6 +915,12 @@ function App() {
   const acPersistent = session?.ac_action
     ? state.actions[session.ac_action.action_id]
     : undefined;
+  const proposedMusicCategory = session?.music_action
+    ? MUSIC_PLAYLISTS[String(session.music_action.payload.track_id)]?.key
+    : undefined;
+  const displayedMusicCategory = musicCatalog?.categories.find(
+    (category) => category.key === (proposedMusicCategory ?? selectedMusicCategory),
+  );
   const connectionLabel = {
     idle: "未连接",
     connecting: "连接中",
@@ -1826,16 +1854,64 @@ function App() {
             </div>
           </section>
 
-          <ActionCard
-            title="音乐动作"
-            proposal={session?.music_action ?? null}
-            persisted={musicPersistent}
-            session={session}
-            enabled={actionButtonsEnabled(session, "music")}
-            busy={busy}
-            onDecision={(approved) => decide(session?.music_action ?? null, approved)}
-            testId="music-action-id"
-          />
+          <section className="panel compact-panel music-catalog-panel" data-testid="music-catalog-panel">
+            <div className="panel-title">
+              <div><span className="eyebrow">本地目录 · Audius 预览</span><h2>音乐推荐</h2></div>
+              <StatusPill value={displayedMusicCategory?.status ?? (musicCatalogError ? "UNAVAILABLE" : "WAITING")} />
+            </div>
+            <p className="music-privacy-copy">
+              Agent 只选择情绪类别；曲目 ID 由本地目录轮转，原始对话和情绪历史不会发送给 Audius。
+            </p>
+            <div className="music-category-tabs" role="tablist" aria-label="音乐种子分类">
+              {(musicCatalog?.categories ?? []).map((category) => (
+                <button
+                  key={category.key}
+                  type="button"
+                  className={(proposedMusicCategory ?? selectedMusicCategory) === category.key ? "active" : ""}
+                  aria-selected={(proposedMusicCategory ?? selectedMusicCategory) === category.key}
+                  disabled={Boolean(proposedMusicCategory)}
+                  onClick={() => setSelectedMusicCategory(category.key)}
+                >
+                  {MUSIC_CATEGORY_LABELS[category.key] ?? category.key}
+                  <small>{category.ready_count}/{category.track_count}</small>
+                </button>
+              ))}
+            </div>
+            {displayedMusicCategory ? (
+              <div className="music-track-list">
+                {displayedMusicCategory.tracks.slice(0, 4).map((track) => (
+                  <div className="music-track" key={track.track_id}>
+                    <div><strong>{track.title}</strong><span>{track.artist}</span></div>
+                    <small>{track.genre} · {track.energy} · {track.vocal_type}</small>
+                  </div>
+                ))}
+                {displayedMusicCategory.tracks.length > 4 && (
+                  <small>另有 {displayedMusicCategory.tracks.length - 4} 首候选，播放时由本地目录轮转。</small>
+                )}
+              </div>
+            ) : (
+              <p className="empty-copy">
+                {musicCatalogError ? `音乐目录不可用：${musicCatalogError}` : "正在读取本地种子目录。"}
+              </p>
+            )}
+            {session?.music_action ? (
+              <ActionCard
+                compact
+                title="确认播放推荐音乐"
+                proposal={session.music_action}
+                persisted={musicPersistent}
+                session={session}
+                enabled={actionButtonsEnabled(session, "music")}
+                busy={busy}
+                onDecision={(approved) => decide(session.music_action, approved)}
+                testId="music-action-id"
+              />
+            ) : (
+              <div className="music-action-placeholder">
+                完成情绪确认后，确定性策略才会生成音乐动作；当前浏览分类不会触发联网或播放。
+              </div>
+            )}
+          </section>
           <ActionCard
             title="空调动作"
             proposal={session?.ac_action ?? null}

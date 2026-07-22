@@ -1,9 +1,10 @@
 {
   "version": 1,
-  "purpose": "preliminary_audius_demo_seed",
+  "purpose": "validated_audius_demo_seed",
   "generated_at": "2026-07-21T14:50:48.960889+00:00",
   "source_count": 20,
-  "resolved_count": 17,
+  "resolved_count": 13,
+  "excluded_count": 4,
   "failed_count": 3,
   "tracks": [
     {
@@ -71,78 +72,6 @@
         "mood": "Excited",
         "bpm": 97,
         "duration": 145,
-        "is_streamable": true,
-        "is_unlisted": false,
-        "is_stream_gated": false
-      }
-    },
-    {
-      "catalog_id": "AUD-MOOD-003",
-      "track_id": "ZaYda",
-      "title": "Peace Sign",
-      "artist": "The Red Coins",
-      "genre": "Pop",
-      "audius_mood": "Upbeat",
-      "moods": [
-        "cheerful"
-      ],
-      "energy": "medium",
-      "contexts": [
-        "happy"
-      ],
-      "vocal_type": "vocal",
-      "retained_from_previous": true,
-      "audius_url": "https://audius.co/theredcoins/peace-sign",
-      "review_note": "保留的 Pop 候选；需试听确认歌词主题、语言和是否含显式内容。",
-      "review_status": "pending_listen",
-      "track_id_resolution": "resolved_from_permalink",
-      "playlist_keys": [
-        "UPLIFT"
-      ],
-      "provider_metadata": {
-        "title": "Peace Sign",
-        "artist": "The Red Coins",
-        "genre": "Pop",
-        "mood": "Upbeat",
-        "bpm": 115.2,
-        "duration": 226,
-        "is_streamable": true,
-        "is_unlisted": false,
-        "is_stream_gated": false
-      }
-    },
-    {
-      "catalog_id": "AUD-MOOD-005",
-      "track_id": "NxMy4",
-      "title": "The Light of Day",
-      "artist": "10th Floor Beats",
-      "genre": "Soundtrack",
-      "audius_mood": "Upbeat",
-      "moods": [
-        "cheerful"
-      ],
-      "energy": "medium",
-      "contexts": [
-        "happy",
-        "physically_tired"
-      ],
-      "vocal_type": "instrumental",
-      "retained_from_previous": true,
-      "audius_url": "https://audius.co/Soulmindedmusic/the-light-of-day",
-      "review_note": "钢琴、铃声与积极氛围；可在轻度身体疲惫时作为温和提振。",
-      "review_status": "pending_listen",
-      "track_id_resolution": "resolved_from_permalink",
-      "playlist_keys": [
-        "RELAX",
-        "UPLIFT"
-      ],
-      "provider_metadata": {
-        "title": "The Light of Day",
-        "artist": "10th Floor Beats ",
-        "genre": "Soundtrack",
-        "mood": "Upbeat",
-        "bpm": 120,
-        "duration": 225,
         "is_streamable": true,
         "is_unlisted": false,
         "is_stream_gated": false
@@ -261,42 +190,6 @@
       }
     },
     {
-      "catalog_id": "AUD-MOOD-010",
-      "track_id": "xkajGQ7",
-      "title": "Only Halfway",
-      "artist": "View Park",
-      "genre": "Pop",
-      "audius_mood": "Sentimental",
-      "moods": [
-        "healing"
-      ],
-      "energy": "low",
-      "contexts": [
-        "emotionally_low",
-        "lonely"
-      ],
-      "vocal_type": "vocal",
-      "retained_from_previous": false,
-      "audius_url": "https://audius.co/viewparkrecords/only-halfway",
-      "review_note": "带歌词的情感 Pop；主题涉及失落与音乐作为疗愈方式，需试听确认是否过度压低情绪。",
-      "review_status": "pending_listen",
-      "track_id_resolution": "resolved_from_permalink",
-      "playlist_keys": [
-        "COMFORT"
-      ],
-      "provider_metadata": {
-        "title": "Only Halfway",
-        "artist": "View Park",
-        "genre": "Pop",
-        "mood": "Sentimental",
-        "bpm": 130,
-        "duration": 135,
-        "is_streamable": true,
-        "is_unlisted": false,
-        "is_stream_gated": false
-      }
-    },
-    {
       "catalog_id": "AUD-MOOD-011",
       "track_id": "BaJjA",
       "title": "Lonely",
@@ -392,6 +285,7 @@
       "track_id_resolution": "resolved_from_permalink",
       "playlist_keys": [
         "RELAX",
+        "COOLDOWN",
         "NEUTRAL"
       ],
       "provider_metadata": {
@@ -430,6 +324,7 @@
       "track_id_resolution": "resolved_from_permalink",
       "playlist_keys": [
         "RELAX",
+        "COOLDOWN",
         "NEUTRAL"
       ],
       "provider_metadata": {
@@ -439,45 +334,6 @@
         "mood": "Peaceful",
         "bpm": 119.1,
         "duration": 162,
-        "is_streamable": true,
-        "is_unlisted": false,
-        "is_stream_gated": false
-      }
-    },
-    {
-      "catalog_id": "AUD-MOOD-016",
-      "track_id": "kp8v6Ap",
-      "title": "Peace",
-      "artist": "Viktor Harter",
-      "genre": "Hip-Hop/Rap",
-      "audius_mood": "Peaceful",
-      "moods": [
-        "calm"
-      ],
-      "energy": "medium",
-      "contexts": [
-        "stressed",
-        "angry",
-        "calm"
-      ],
-      "vocal_type": "vocal",
-      "retained_from_previous": false,
-      "audius_url": "https://audius.co/ViktorHarter/peace",
-      "review_note": "说唱/演唱结合，歌词强调和平、冥想和挺过困难；用于愤怒状态时不采用攻击性音乐。",
-      "review_status": "pending_listen",
-      "track_id_resolution": "resolved_from_permalink",
-      "playlist_keys": [
-        "RELAX",
-        "COOLDOWN",
-        "NEUTRAL"
-      ],
-      "provider_metadata": {
-        "title": "Peace",
-        "artist": "Viktor Harter",
-        "genre": "Hip-Hop/Rap",
-        "mood": "Peaceful",
-        "bpm": 135.9,
-        "duration": 232,
         "is_streamable": true,
         "is_unlisted": false,
         "is_stream_gated": false
@@ -631,12 +487,10 @@
   ],
   "playlist_pools": {
     "RELAX": [
-      "NxMy4",
       "Zb7d39a",
       "yyXBY",
       "32YZxaE",
       "9kb194O",
-      "kp8v6Ap",
       "NPKVlGx",
       "bv6MO"
     ],
@@ -644,26 +498,23 @@
       "Zb7d39a",
       "yyXBY",
       "OvvXpK4",
-      "xkajGQ7",
       "BaJjA",
       "yN2lx"
     ],
     "UPLIFT": [
       "0djMo74",
       "NQypp",
-      "ZaYda",
-      "NxMy4",
       "Zb7d39a",
       "yyXBY"
     ],
     "COOLDOWN": [
-      "kp8v6Ap"
+      "32YZxaE",
+      "9kb194O"
     ],
     "NEUTRAL": [
       "yN2lx",
       "32YZxaE",
       "9kb194O",
-      "kp8v6Ap",
       "NPKVlGx",
       "5jw17",
       "ZG6Yqq6",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import subprocess
 import sys
@@ -62,6 +63,29 @@ from scripts.phase5_metrics import (
 
 ROOT = Path(__file__).resolve().parents[1]
 SYNTHETIC_NOW = datetime(2026, 7, 20, 12, 0, tzinfo=timezone.utc)
+
+
+def _synthetic_music_root(root: Path) -> Path:
+    """Create a non-played fixture for deterministic acceptance paths."""
+    music_root = root / "music"
+    track_path = music_root / "tracks" / "calm_piano_01.flac"
+    track_path.parent.mkdir(parents=True, exist_ok=True)
+    track_path.write_bytes(b"synthetic-test-audio-not-for-playback")
+    (music_root / "catalog.json").write_text(
+        json.dumps(
+            {
+                "tracks": [
+                    {
+                        "track_id": "calm_piano_01",
+                        "path": "tracks/calm_piano_01.flac",
+                        "sha256": hashlib.sha256(track_path.read_bytes()).hexdigest(),
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return music_root
 
 
 class FixedClock:
@@ -521,6 +545,7 @@ async def run_degraded_e2e(count: int = 5) -> E2EResult:
     model_fallback_count = 0
     with tempfile.TemporaryDirectory() as temporary:
         database = Path(temporary) / "degraded-e2e.sqlite3"
+        music_root = _synthetic_music_root(Path(temporary))
         for _ in range(count):
             playback = RecordingPlaybackBackend()
             orchestrator = Orchestrator(
@@ -529,7 +554,7 @@ async def run_degraded_e2e(count: int = 5) -> E2EResult:
                 live_connector=RealExternalConnector(
                     transport=FakeWeatherTransport(), clock=FixedClock()
                 ),
-                live_music=LocalMusicPlayer(backend=playback),
+                live_music=LocalMusicPlayer(music_root, backend=playback),
             )
             live = LiveCoordinator(
                 orchestrator,
@@ -778,16 +803,19 @@ def run_fault_matrix() -> list[FaultResult]:
     record("ACTION_ID_MISMATCH", mismatch_passed, "REJECTED_NO_EXECUTION")
 
     duplicate_backend = RecordingPlaybackBackend()
-    duplicate_player = LocalMusicPlayer(backend=duplicate_backend)
-    proposal = _proposal(999)
-    duplicate_player.execute(proposal, _approved(proposal), SYNTHETIC_NOW)
-    try:
+    with tempfile.TemporaryDirectory() as temporary:
+        duplicate_player = LocalMusicPlayer(
+            _synthetic_music_root(Path(temporary)), backend=duplicate_backend
+        )
+        proposal = _proposal(999)
         duplicate_player.execute(proposal, _approved(proposal), SYNTHETIC_NOW)
-        duplicate_passed = False
-    except Exception:
-        duplicate_passed = duplicate_backend.play_count == 1
-    finally:
-        duplicate_player.close()
+        try:
+            duplicate_player.execute(proposal, _approved(proposal), SYNTHETIC_NOW)
+            duplicate_passed = False
+        except Exception:
+            duplicate_passed = duplicate_backend.play_count == 1
+        finally:
+            duplicate_player.close()
     record("DUPLICATE_ACTION_EXECUTION", duplicate_passed, "REJECTED_AFTER_FIRST")
     return results
 

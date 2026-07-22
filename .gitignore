@@ -13,9 +13,11 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+.test-tmp/
 
 # Node
 node_modules/
+*.tsbuildinfo
 
 # 日志和数据库
 logs/

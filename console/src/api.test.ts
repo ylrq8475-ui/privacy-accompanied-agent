@@ -197,3 +197,30 @@ describe("synthetic visual perception API", () => {
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("data:image");
   });
 });
+
+describe("local music catalog API", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("loads only the server-owned minimized seed catalog", async () => {
+    const responseBody = {
+      source: "BUNDLED_SEED",
+      local_only: true,
+      provider_urls_exposed: false,
+      credentials_exposed: false,
+      categories: [],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(responseBody), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(api.musicCatalog()).resolves.toEqual(responseBody);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/v1/music/catalog",
+      expect.objectContaining({ headers: undefined }),
+    );
+  });
+});

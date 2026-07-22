@@ -4,6 +4,7 @@ import type {
   PersistedAction,
   SessionSnapshot,
   LiveHealth,
+  MusicCatalogResponse,
   TextAnalysisResponse,
   TextStateLabel,
   UserPreferences,
@@ -163,6 +164,7 @@ export const api = {
   getAction: (actionId: string) =>
     jsonRequest<PersistedAction>(`/v1/actions/${actionId}`),
   liveHealth: () => jsonRequest<LiveHealth>("/v1/live/health"),
+  musicCatalog: () => jsonRequest<MusicCatalogResponse>("/v1/music/catalog"),
   listSyntheticScenes: async () => {
     const response = await jsonRequest<{ scenes: SyntheticScene[] }>(
       "/v1/live/perception/scenes",

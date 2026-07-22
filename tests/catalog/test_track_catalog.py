@@ -23,6 +23,7 @@ from track_catalog.contracts import (
     CatalogSnapshotRequest,
 )
 from track_catalog.store import CatalogStore
+from track_catalog.seed import public_catalog, seed_store
 
 
 def snapshot(
@@ -160,6 +161,55 @@ class CatalogStoreTests(unittest.TestCase):
                 with self.assertRaises(ValidationError):
                     CatalogSnapshotRequest.model_validate(value)
 
+    def test_bundled_seed_is_idempotent_and_public_view_is_minimized(self) -> None:
+        manifest = (
+            Path(__file__).parents[2]
+            / "data"
+            / "music"
+            / "seeds"
+            / "audius_mood_playlist_20_tracks.resolved.json"
+        )
+        first = seed_store(self.store, manifest)
+        second = seed_store(self.store, manifest)
+        self.assertEqual(first["resolved_track_count"], 13)
+        self.assertEqual(
+            set(first["updated_categories"]),
+            {item.value for item in PlaylistKey},
+        )
+        self.assertEqual(
+            set(second["unchanged_categories"]),
+            {item.value for item in PlaylistKey},
+        )
+        catalog = public_catalog(self.store, manifest)
+        counts = {
+            item["key"]: item["track_count"] for item in catalog["categories"]
+        }
+        self.assertEqual(
+            counts,
+            {
+                "RELAX": 6,
+                "COMFORT": 5,
+                "UPLIFT": 4,
+                "COOLDOWN": 2,
+                "NEUTRAL": 7,
+            },
+        )
+        active_ids = {
+            track["track_id"]
+            for category in catalog["categories"]
+            for track in category["tracks"]
+        }
+        self.assertEqual(len(active_ids), 13)
+        self.assertTrue(
+            {"ZaYda", "NxMy4", "kp8v6Ap", "xkajGQ7"}.isdisjoint(active_ids)
+        )
+        serialized = str(catalog)
+        self.assertNotIn("audius_url", serialized)
+        self.assertNotIn("review_note", serialized)
+        self.assertFalse(catalog["credentials_exposed"])
+        self.assertNotIn("api_key", serialized.casefold())
+        self.assertNotIn("bearer", serialized.casefold())
+
 
 class CatalogAPITests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -192,6 +242,24 @@ class CatalogAPITests(unittest.IsolatedAsyncioTestCase):
             self.app, "POST", "/v1/catalog/lease", b"x" * 65_537
         )
         self.assertEqual((status, body["error"]), (400, "INVALID_REQUEST"))
+
+    async def test_public_catalog_endpoint_does_not_expose_provider_urls(self) -> None:
+        manifest = (
+            Path(__file__).parents[2]
+            / "data"
+            / "music"
+            / "seeds"
+            / "audius_mood_playlist_20_tracks.resolved.json"
+        )
+        self.app.seed_path = str(manifest)
+        self.app.seed_summary = seed_store(self.app.store, manifest)
+        status, body = await json_request(
+            self.app, "GET", "/v1/catalog/public"
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(body["local_only"])
+        self.assertFalse(body["provider_urls_exposed"])
+        self.assertEqual(len(body["categories"]), 5)
 
     def test_catalog_package_has_no_internet_transport(self) -> None:
         root = Path(__file__).parents[2] / "track_catalog"

@@ -54,6 +54,7 @@ services:
       - "1"
     environment:
       SPARK_CATALOG_PATH: /var/lib/spark-demo/audius_catalog.sqlite3
+      SPARK_CATALOG_SEED_PATH: data/music/seeds/audius_mood_playlist_20_tracks.resolved.json
     volumes:
       - catalog-state:/var/lib/spark-demo
     networks:

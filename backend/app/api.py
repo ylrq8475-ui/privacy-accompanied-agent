@@ -23,7 +23,7 @@ from backend.app.console_assets import ConsoleAssetResponse, ConsoleAssets
 from backend.app.adapters import AdapterError, Phase3Settings, Step3Adapter, StepAudioAdapter
 from backend.app.live import LiveCoordinator
 from backend.app.local_music import LocalMusicPlayer
-from backend.app.track_catalog import TrackCatalogClient
+from backend.app.track_catalog import TrackCatalogClient, TrackCatalogError
 from backend.app.orchestrator import (
     InvalidOperation,
     MockScenario,
@@ -198,6 +198,20 @@ class DemoASGIApp:
 
             if method == "GET" and path == "/v1/live/health":
                 await _json_response(send, 200, self.live.health())
+                return
+
+            if method == "GET" and path == "/v1/music/catalog":
+                if self.orchestrator.track_catalog is None:
+                    await _json_response(
+                        send, 503, {"error": "CATALOG_UNAVAILABLE"}
+                    )
+                    return
+                try:
+                    catalog = self.orchestrator.track_catalog.public_catalog()
+                except TrackCatalogError as error:
+                    await _json_response(send, 503, {"error": error.code})
+                    return
+                await _json_response(send, 200, catalog)
                 return
 
             if method == "GET" and path == "/v1/live/perception/scenes":
