@@ -12,6 +12,7 @@ from external_connector.audius import AudiusMusicConnector, AudiusSettings
 from external_connector.client import (
     InternalConnectorHTTP,
     InternalHTTPResponse,
+    PREVIEW_INTERNAL_TIMEOUT_SECONDS,
     RemoteAudiusConnector,
     RemoteWeatherConnector,
 )
@@ -160,6 +161,7 @@ class FakeInternalTransport:
         body: dict[str, object] | None,
         *,
         max_response_bytes: int,
+        timeout_seconds: float = 6.0,
     ) -> InternalHTTPResponse:
         self.requests.append(
             {
@@ -167,6 +169,7 @@ class FakeInternalTransport:
                 "path": path,
                 "body": body,
                 "max_response_bytes": max_response_bytes,
+                "timeout_seconds": timeout_seconds,
             }
         )
         return self.responses.popleft()
@@ -286,6 +289,10 @@ class RemoteConnectorClientTests(unittest.TestCase):
         result = connector.fetch_preview(request, "trackA")
         self.assertEqual(result.audio, audio)
         self.assertEqual(result.size_bytes, len(audio))
+        self.assertEqual(
+            transport.requests[0]["timeout_seconds"],
+            PREVIEW_INTERNAL_TIMEOUT_SECONDS,
+        )
 
     def test_remote_audius_safe_error_preserves_request_sent_flag(self) -> None:
         transport = FakeInternalTransport(

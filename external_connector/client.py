@@ -34,6 +34,8 @@ from .weather import ExternalConnectorTransportError
 
 
 DEFAULT_CONNECTOR_URL = "http://127.0.0.1:8030"
+DEFAULT_INTERNAL_TIMEOUT_SECONDS = 6.0
+PREVIEW_INTERNAL_TIMEOUT_SECONDS = 45.0
 CONNECTOR_HOSTS = frozenset({"external-connector", "localhost", "127.0.0.1", "::1"})
 _TRACK_ID_PATTERN = re.compile(r"^[A-Za-z0-9]{1,64}$")
 _CONTENT_TYPES = frozenset(
@@ -81,6 +83,7 @@ class InternalConnectorHTTP:
         body: dict[str, object] | None,
         *,
         max_response_bytes: int,
+        timeout_seconds: float = DEFAULT_INTERNAL_TIMEOUT_SECONDS,
     ) -> InternalHTTPResponse:
         if not path.startswith("/") or ".." in path:
             raise InternalConnectorUnavailable("internal connector path rejected")
@@ -99,7 +102,7 @@ class InternalConnectorHTTP:
         )
         started = time.monotonic()
         try:
-            with self._opener.open(request, timeout=6.0) as response:
+            with self._opener.open(request, timeout=timeout_seconds) as response:
                 raw = response.read(max_response_bytes + 1)
                 status = int(response.status)
                 headers = {key.casefold(): value for key, value in response.headers.items()}
@@ -339,6 +342,7 @@ class RemoteAudiusConnector:
                 f"/v1/audius/tracks/{provider_track_id}/preview",
                 approved.model_dump(mode="json"),
                 max_response_bytes=MAX_AUDIO_BYTES,
+                timeout_seconds=PREVIEW_INTERNAL_TIMEOUT_SECONDS,
             )
         except InternalConnectorUnavailable as error:
             raise AudiusConnectorError("CONNECTOR_UNAVAILABLE", request_sent=False) from error
