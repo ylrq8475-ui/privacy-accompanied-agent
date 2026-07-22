@@ -29,6 +29,7 @@ class DeploymentArtifactTests(unittest.TestCase):
         self.assertIn("$SafeDirectories", script)
         self.assertIn("$SafeFiles", script)
         self.assertIn("audius_playlists\\.local\\.json", script)
+        self.assertIn('"docker-compose.dgx.audius-sync.yml"', script)
         self.assertIn("\\.sqlite3", script)
         self.assertNotIn('"data/demo.sqlite3"', script)
         self.assertNotIn("docker compose down", script)
@@ -51,5 +52,10 @@ class DeploymentArtifactTests(unittest.TestCase):
         self.assertIn("COPY Dockerfile docker-compose.dgx.yml ./", dockerfile)
         self.assertIn("USER spark-demo", dockerfile)
         self.assertIn('docker run --rm --network none "${image_tag}-test"', remote)
+        self.assertIn("docker-compose.dgx.audius.yml", remote)
+        rollback = (ROOT / "scripts" / "rollback_remote_dgx.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("docker-compose.dgx.audius.yml", rollback)
         self.assertNotIn("sudo", remote)
         self.assertNotIn("docker compose down", remote)

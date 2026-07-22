@@ -43,6 +43,7 @@ $SafeFiles = @(
     ".env.example",
     "docker-compose.dgx.yml",
     "docker-compose.dgx.audius.yml",
+    "docker-compose.dgx.audius-sync.yml",
     "console/index.html",
     "console/package.json",
     "console/package-lock.json",

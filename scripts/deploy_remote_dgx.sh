@@ -9,6 +9,7 @@ fi
 image_tag=$1
 release_dir=$2
 project_name=spark-active-companion-demo
+compose_files="-f docker-compose.dgx.yml -f docker-compose.dgx.audius.yml"
 
 case "$image_tag" in
     spark-active-companion-demo:[a-f0-9][a-f0-9]*) ;;
@@ -32,23 +33,23 @@ model_state() {
 model_state > model-state-before.txt
 
 SPARK_DEMO_IMAGE="$image_tag" \
-docker compose -p "$project_name" -f docker-compose.dgx.yml config --quiet
+docker compose -p "$project_name" $compose_files config --quiet
 
 docker build --target test -t "${image_tag}-test" .
 docker run --rm --network none "${image_tag}-test"
 docker build --target runtime -t "$image_tag" .
 
-existing_backend=$(docker compose -p "$project_name" -f docker-compose.dgx.yml ps -q backend 2>/dev/null || true)
+existing_backend=$(docker compose -p "$project_name" $compose_files ps -q backend 2>/dev/null || true)
 if [ -n "$existing_backend" ]; then
     docker inspect --format '{{.Config.Image}}' "$existing_backend" > previous-image.txt
 fi
 
 SPARK_DEMO_IMAGE="$image_tag" \
-docker compose -p "$project_name" -f docker-compose.dgx.yml up \
+docker compose -p "$project_name" $compose_files up \
     -d --no-build external-connector track-catalog backend
 
 attempt=0
-backend_id=$(SPARK_DEMO_IMAGE="$image_tag" docker compose -p "$project_name" -f docker-compose.dgx.yml ps -q backend)
+backend_id=$(SPARK_DEMO_IMAGE="$image_tag" docker compose -p "$project_name" $compose_files ps -q backend)
 until docker exec "$backend_id" python - <<'PY'
 import urllib.request
 

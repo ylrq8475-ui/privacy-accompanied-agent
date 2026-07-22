@@ -8,6 +8,7 @@ fi
 
 release_dir=$1
 project_name=spark-active-companion-demo
+compose_files="-f docker-compose.dgx.yml -f docker-compose.dgx.audius.yml"
 cd "$release_dir"
 
 if [ ! -s previous-image.txt ]; then
@@ -21,7 +22,7 @@ case "$previous_image" in
 esac
 
 SPARK_DEMO_IMAGE="$previous_image" \
-docker compose -p "$project_name" -f docker-compose.dgx.yml up \
+docker compose -p "$project_name" $compose_files up \
     -d --no-build external-connector track-catalog backend
 
 printf '%s\n' "ROLLED_BACK_IMAGE=$previous_image"
