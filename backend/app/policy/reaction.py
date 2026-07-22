@@ -148,32 +148,43 @@ def evaluate_reaction_suggestions(
     playlist_key: PlaylistKey | None = None
     decisions: list[PolicySuggestionDecision] = []
 
-    for suggestion in reaction.suggestions:
-        if isinstance(suggestion, EmotionMatchedMusicSuggestion):
-            if music_preference_confirmed and music_preference == "NONE":
-                decisions.append(
-                    PolicySuggestionDecision(
-                        suggestion_type="EMOTION_MATCHED_MUSIC",
-                        accepted=False,
-                        reason_code="MUSIC_PREFERENCE_NONE",
-                    )
-                )
-            else:
-                playlist_key = playlist_for_emotion(confirmed_emotion)
-                music_track_id = logical_track_for_playlist(playlist_key)
-                decisions.append(
-                    PolicySuggestionDecision(
-                        suggestion_type="EMOTION_MATCHED_MUSIC",
-                        accepted=True,
-                        reason_code=f"EMOTION_MAPPED_{playlist_key.value}",
-                    )
-                )
-            continue
+    model_suggested_music = any(
+        isinstance(suggestion, EmotionMatchedMusicSuggestion)
+        for suggestion in reaction.suggestions
+    )
+    preference_requests_music = (
+        music_preference_confirmed
+        and music_preference == "EMOTION_MATCHED"
+    )
+    preference_blocks_music = (
+        music_preference_confirmed
+        and music_preference == "NONE"
+    )
 
-        # The LLM AC suggestion is retained in the public contract, but deliberately
-        # does not influence deterministic action creation.
-        if isinstance(suggestion, ACSuggestion):
-            continue
+    if preference_blocks_music:
+        if model_suggested_music:
+            decisions.append(
+                PolicySuggestionDecision(
+                    suggestion_type="EMOTION_MATCHED_MUSIC",
+                    accepted=False,
+                    reason_code="MUSIC_PREFERENCE_NONE",
+                )
+            )
+    elif model_suggested_music or preference_requests_music:
+        playlist_key = playlist_for_emotion(confirmed_emotion)
+        music_track_id = logical_track_for_playlist(playlist_key)
+
+        decisions.append(
+            PolicySuggestionDecision(
+                suggestion_type="EMOTION_MATCHED_MUSIC",
+                accepted=True,
+                reason_code=(
+                    f"EMOTION_MAPPED_{playlist_key.value}"
+                    if model_suggested_music
+                    else "MUSIC_PREFERENCE_EMOTION_MATCHED"
+                ),
+            )
+        )
 
     ac_decision, ac_payload = decide_ac(weather, confirmed_emotion)
     decisions.append(
@@ -183,6 +194,7 @@ def evaluate_reaction_suggestions(
             reason_code=ac_decision.reason_code,
         )
     )
+
     return ReactionPolicyResult(
         music_track_id,
         playlist_key,

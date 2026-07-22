@@ -900,7 +900,8 @@ class Orchestrator:
                 )
                 self._persist_running(session, proposal.action_id)
                 use_local_player = (
-                    session.runtime_mode == "LIVE" and self.live_music is not None
+                    session.runtime_mode in {"LIVE", "TEXT_ANALYSIS"}
+                    and self.live_music is not None
                 )
                 try:
                     if use_local_player:
