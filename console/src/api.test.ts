@@ -223,4 +223,39 @@ describe("local music catalog API", () => {
       expect.objectContaining({ headers: undefined }),
     );
   });
+
+  it("consumes authorized music as binary audio without a JSON payload", async () => {
+    const audio = new Uint8Array([73, 68, 51, 4]);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(audio, {
+        status: 200,
+        headers: { "content-type": "audio/mpeg", "cache-control": "no-store" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await api.consumeMusicAudio("session-1", "music-1");
+    expect(result.contentType).toBe("audio/mpeg");
+    expect(await result.audio.arrayBuffer()).toEqual(audio.buffer);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/v1/music/sessions/session-1/actions/music-1/audio",
+      { headers: { accept: "audio/*" } },
+    );
+  });
+
+  it("surfaces a consumed one-time music delivery", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: "MUSIC_AUDIO_CONSUMED" }), {
+          status: 410,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    await expect(api.consumeMusicAudio("session-1", "music-1")).rejects.toEqual(
+      expect.objectContaining<Partial<APIError>>({ status: 410 }),
+    );
+  });
 });

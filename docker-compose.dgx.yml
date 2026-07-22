@@ -100,6 +100,7 @@ services:
       SPARK_DEMO_SCENE_MEDIA: private
       SPARK_EXTERNAL_CONNECTOR_URL: http://external-connector:8030
       SPARK_TRACK_CATALOG_URL: http://track-catalog:8011
+      SPARK_MUSIC_PLAYBACK_TARGET: BROWSER
     volumes:
       - backend-state:/var/lib/spark-demo
     networks:

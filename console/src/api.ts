@@ -165,6 +165,18 @@ export const api = {
     jsonRequest<PersistedAction>(`/v1/actions/${actionId}`),
   liveHealth: () => jsonRequest<LiveHealth>("/v1/live/health"),
   musicCatalog: () => jsonRequest<MusicCatalogResponse>("/v1/music/catalog"),
+  consumeMusicAudio: async (sessionId: string, actionId: string) => {
+    const response = await fetch(
+      `/v1/music/sessions/${sessionId}/actions/${actionId}/audio`,
+      { headers: { accept: "audio/*" } },
+    );
+    const contentType = response.headers.get("content-type") ?? "";
+    if (response.ok && contentType.startsWith("audio/")) {
+      return { audio: await response.blob(), contentType };
+    }
+    const body = (await response.json()) as Record<string, unknown>;
+    throw new APIError(response.status, body);
+  },
   listSyntheticScenes: async () => {
     const response = await jsonRequest<{ scenes: SyntheticScene[] }>(
       "/v1/live/perception/scenes",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from collections.abc import Awaitable, Callable
@@ -71,7 +72,7 @@ class ExternalConnectorASGIApp:
 
             if method == "POST" and path == "/v1/weather":
                 raw_request = await _read_json(receive)
-                result = self.weather.send(raw_request)
+                result = await asyncio.to_thread(self.weather.send, raw_request)
                 await _json_response(send, 200, result.model_dump(mode="json"))
                 return
 
@@ -79,7 +80,9 @@ class ExternalConnectorASGIApp:
             if method == "POST" and playlist_match:
                 playlist_key = PlaylistKey(playlist_match.group(1))
                 raw_request = await _read_json(receive)
-                result = self.audius.sync_playlist(raw_request, playlist_key)
+                result = await asyncio.to_thread(
+                    self.audius.sync_playlist, raw_request, playlist_key
+                )
                 await _json_response(
                     send,
                     200,
@@ -97,7 +100,9 @@ class ExternalConnectorASGIApp:
             preview_match = _PREVIEW_PATH.fullmatch(path)
             if method == "POST" and preview_match:
                 raw_request = await _read_json(receive)
-                result = self.audius.fetch_preview(raw_request, preview_match.group(1))
+                result = await asyncio.to_thread(
+                    self.audius.fetch_preview, raw_request, preview_match.group(1)
+                )
                 await _binary_response(
                     send,
                     result.audio,

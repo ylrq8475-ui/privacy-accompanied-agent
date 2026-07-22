@@ -1230,6 +1230,7 @@ class Orchestrator:
                     provider_track_id=preview.provider_track_id,
                     size_bytes=preview.size_bytes,
                     fetch_latency_ms=preview.latency_ms,
+                    content_type=preview.content_type,
                 )
                 if lease is not None:
                     result.result.update(

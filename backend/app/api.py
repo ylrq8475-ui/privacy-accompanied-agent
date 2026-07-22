@@ -32,6 +32,11 @@ from backend.app.orchestrator import (
 )
 from backend.app.persistence import ActionNotFound, SQLitePersistence
 from backend.app.schemas.base import StrictModel
+from backend.app.schemas.actions import (
+    ActionType,
+    AuthorizationStatus,
+    ExecutionStatus,
+)
 from backend.app.schemas.persistence import (
     MemoryConfirmationRequest,
     StateConfirmationRequest,
@@ -78,10 +83,11 @@ def _default_orchestrator() -> Orchestrator:
         live_connector = RealExternalConnector()
         live_audius = AudiusMusicConnector(AudiusSettings.from_environment())
     database_path = os.environ.get("SPARK_DATABASE_PATH", "data/demo.sqlite3")
+    playback_target = os.environ.get("SPARK_MUSIC_PLAYBACK_TARGET", "DEVICE")
     return Orchestrator(
         persistence=SQLitePersistence(database_path),
         live_connector=live_connector,
-        live_music=LocalMusicPlayer(),
+        live_music=LocalMusicPlayer(delivery_mode=playback_target),
         live_audius=live_audius,
         track_catalog=TrackCatalogClient(),
     )
@@ -212,6 +218,47 @@ class DemoASGIApp:
                     await _json_response(send, 503, {"error": error.code})
                     return
                 await _json_response(send, 200, catalog)
+                return
+
+            music_audio_match = re.fullmatch(
+                r"/v1/music/sessions/([A-Za-z0-9._:-]+)/actions/"
+                r"([A-Za-z0-9._:-]+)/audio",
+                path,
+            )
+            if method == "GET" and music_audio_match:
+                session = self.orchestrator.get_session(music_audio_match.group(1))
+                action_id = music_audio_match.group(2)
+                proposal = session.music_action
+                authorization = session.authorizations.get(action_id)
+                result = session.results.get(action_id)
+                if (
+                    proposal is None
+                    or proposal.action_id != action_id
+                    or proposal.action_type is not ActionType.PLAY_MUSIC
+                ):
+                    await _json_response(send, 404, {"error": "MUSIC_ACTION_NOT_FOUND"})
+                    return
+                if (
+                    authorization is None
+                    or authorization.authorization_status
+                    is not AuthorizationStatus.APPROVED
+                    or result is None
+                    or result.execution_status is not ExecutionStatus.SUCCEEDED
+                    or result.result.get("delivery_ready") is not True
+                ):
+                    await _json_response(send, 409, {"error": "MUSIC_AUDIO_NOT_READY"})
+                    return
+                player = self.orchestrator.live_music
+                if player is None or player.delivery_mode != "BROWSER":
+                    await _json_response(send, 409, {"error": "BROWSER_DELIVERY_DISABLED"})
+                    return
+                delivery = player.consume_browser_delivery(action_id)
+                if delivery is None:
+                    await _json_response(send, 410, {"error": "MUSIC_AUDIO_CONSUMED"})
+                    return
+                await _binary_response(
+                    send, 200, delivery.audio, delivery.content_type
+                )
                 return
 
             if method == "GET" and path == "/v1/live/perception/scenes":
@@ -646,7 +693,8 @@ class DemoASGIApp:
             )
             if method == "POST" and text_authorization_match:
                 request = AuthorizationRequest.model_validate(await _read_json(receive))
-                session = self.orchestrator.authorize(
+                session = await asyncio.to_thread(
+                    self.orchestrator.authorize,
                     text_authorization_match.group(1),
                     text_authorization_match.group(2),
                     request.approved,
@@ -662,7 +710,8 @@ class DemoASGIApp:
             )
             if method == "POST" and authorization_match:
                 request = AuthorizationRequest.model_validate(await _read_json(receive))
-                session = self.orchestrator.authorize(
+                session = await asyncio.to_thread(
+                    self.orchestrator.authorize,
                     authorization_match.group(1),
                     authorization_match.group(2),
                     request.approved,
@@ -677,7 +726,8 @@ class DemoASGIApp:
             )
             if method == "POST" and live_authorization_match:
                 request = AuthorizationRequest.model_validate(await _read_json(receive))
-                session = self.orchestrator.authorize(
+                session = await asyncio.to_thread(
+                    self.orchestrator.authorize,
                     live_authorization_match.group(1),
                     live_authorization_match.group(2),
                     request.approved,

@@ -330,7 +330,10 @@ function ActionCard({
   const logicalTrackId = typeof proposal?.payload.track_id === "string" ? proposal.payload.track_id : "";
   const proposedPlaylist = MUSIC_PLAYLISTS[logicalTrackId];
   const musicSource = typeof resultData?.source === "string" ? resultData.source : null;
-  const resultTitle = musicSource === "AUDIUS_PREVIEW"
+  const browserDeliveryReady = isMusic && resultData?.delivery_ready === true;
+  const resultTitle = browserDeliveryReady
+    ? "音频已安全交付"
+    : musicSource === "AUDIUS_PREVIEW"
     ? "Audius 预览播放"
     : musicSource === "LOCAL_FALLBACK"
       ? "本地钢琴曲降级播放"
@@ -339,7 +342,9 @@ function ActionCard({
         : isMusic
           ? "模拟执行结果"
           : "空调模拟执行完成";
-  const resultDetail = isMusic && resultData?.playback_started === true
+  const resultDetail = browserDeliveryReady
+    ? "Spark 已准备一次性音频；以浏览器播放器状态为实际播放依据。"
+    : isMusic && resultData?.playback_started === true
     ? "播放设备已启动；这不等于确认人耳听到。"
     : isMusic
       ? String(resultData?.message ?? "未执行物理动作。")
@@ -486,6 +491,8 @@ function App() {
   const [musicCatalog, setMusicCatalog] = useState<MusicCatalogResponse | null>(null);
   const [selectedMusicCategory, setSelectedMusicCategory] = useState("RELAX");
   const [musicCatalogError, setMusicCatalogError] = useState<string | null>(null);
+  const [musicPlaybackStatus, setMusicPlaybackStatus] = useState<string | null>(null);
+  const [musicAudioUrl, setMusicAudioUrl] = useState<string | null>(null);
   const [ttsStatus, setTtsStatus] = useState<string | null>(null);
   const [analysisText, setAnalysisText] = useState("");
   const [selectedCityCode, setSelectedCityCode] = useState<CityCode>("310000");
@@ -504,6 +511,17 @@ function App() {
   const [visualError, setVisualError] = useState<string | null>(null);
   const disconnectRef = useRef<(() => void) | null>(null);
   const liveSessionRef = useRef<string | null>(null);
+  const musicPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const musicObjectUrlRef = useRef<string | null>(null);
+
+  const clearMusicAudio = useCallback(() => {
+    musicPlayerRef.current?.pause();
+    if (musicObjectUrlRef.current) {
+      URL.revokeObjectURL(musicObjectUrlRef.current);
+      musicObjectUrlRef.current = null;
+    }
+    setMusicAudioUrl(null);
+  }, []);
 
   const refreshMemories = useCallback(async () => {
     dispatch({ type: "memory", value: await api.listMemories() });
@@ -631,6 +649,14 @@ function App() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => () => {
+    musicPlayerRef.current?.pause();
+    if (musicObjectUrlRef.current) {
+      URL.revokeObjectURL(musicObjectUrlRef.current);
+      musicObjectUrlRef.current = null;
+    }
+  }, []);
+
   const execute = useCallback(async (operation: () => Promise<void>) => {
     setBusy(true);
     setError(null);
@@ -686,6 +712,35 @@ function App() {
           ? await api.authorizeText(state.session!.session_id, proposal.action_id, approved)
           : await api.authorize(state.session!.session_id, proposal.action_id, approved);
       await hydrate(snapshot, false);
+      const result = snapshot.results[proposal.action_id]?.result;
+      if (
+        approved &&
+        proposal.action_type === "PLAY_MUSIC" &&
+        result?.delivery_ready === true
+      ) {
+        setMusicPlaybackStatus("正在从 Spark 获取已授权音频…");
+        const delivery = await api.consumeMusicAudio(
+          snapshot.session_id,
+          proposal.action_id,
+        );
+        clearMusicAudio();
+        const url = URL.createObjectURL(delivery.audio);
+        musicObjectUrlRef.current = url;
+        setMusicAudioUrl(url);
+        const player = musicPlayerRef.current;
+        if (player) {
+          player.src = url;
+          player.load();
+          try {
+            await player.play();
+            setMusicPlaybackStatus("浏览器已开始播放 Audius 预览");
+          } catch {
+            setMusicPlaybackStatus("音频已准备，请点击播放器中的播放按钮");
+          }
+        }
+      } else if (!approved && proposal.action_type === "PLAY_MUSIC") {
+        setMusicPlaybackStatus("已拒绝，本次未获取或播放音频");
+      }
       await refreshPersonalization();
     });
   };
@@ -715,6 +770,8 @@ function App() {
       setAnalysisText("");
       setSubmittedText("");
       setTtsStatus(null);
+      clearMusicAudio();
+      setMusicPlaybackStatus(null);
       setLivePolling(false);
       liveSessionRef.current = null;
       setVisualResult(null);
@@ -1911,6 +1968,17 @@ function App() {
                 完成情绪确认后，确定性策略才会生成音乐动作；当前浏览分类不会触发联网或播放。
               </div>
             )}
+            <div className="music-browser-player">
+              <audio
+                ref={musicPlayerRef}
+                controls
+                preload="none"
+                src={musicAudioUrl ?? undefined}
+                onPlay={() => setMusicPlaybackStatus("浏览器已开始播放")}
+                onEnded={() => setMusicPlaybackStatus("播放完成，可再次播放本次预览")}
+              />
+              <small>{musicPlaybackStatus ?? "授权后音频只交付到当前浏览器，不写入长期记忆。"}</small>
+            </div>
           </section>
           <ActionCard
             title="空调动作"

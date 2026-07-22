@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import OrderedDict
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from threading import RLock
@@ -25,10 +27,18 @@ from backend.app.schemas.music import playlist_for_logical_track
 
 DEFAULT_MUSIC_ROOT = Path("data/music")
 ALLOWED_TRACK_ID = "calm_piano_01"
+MAX_BROWSER_DELIVERIES = 4
+MAX_BROWSER_AUDIO_BYTES = 8 * 1024 * 1024
 
 
 class LocalMusicError(ActionMockError):
     pass
+
+
+@dataclass(frozen=True, slots=True)
+class BrowserAudioDelivery:
+    audio: bytes
+    content_type: str
 
 
 class PlaybackBackend(Protocol):
@@ -110,13 +120,28 @@ class LocalMusicPlayer:
         root: str | Path = DEFAULT_MUSIC_ROOT,
         *,
         backend: PlaybackBackend | None = None,
+        delivery_mode: str = "DEVICE",
     ) -> None:
+        normalized_mode = delivery_mode.strip().upper()
+        if normalized_mode not in {"DEVICE", "BROWSER"}:
+            raise ValueError("delivery_mode must be DEVICE or BROWSER")
         self.root = Path(root)
         self.backend = backend or MiniaudioPlaybackBackend()
+        self.delivery_mode = normalized_mode
         self.executed_action_ids: list[str] = []
+        self._browser_deliveries: OrderedDict[str, BrowserAudioDelivery] = OrderedDict()
         self._lock = RLock()
 
     def health(self) -> dict[str, object]:
+        if self.delivery_mode == "BROWSER":
+            return {
+                "component": "LOCAL_MUSIC",
+                "available": True,
+                "status": "BROWSER_DELIVERY_READY",
+                "latency_ms": 0,
+                "delivery_mode": "BROWSER",
+                "pending_deliveries": len(self._browser_deliveries),
+            }
         try:
             path = self._validated_track(ALLOWED_TRACK_ID)
         except LocalMusicError:
@@ -144,6 +169,38 @@ class LocalMusicPlayer:
             command = MusicPayload(action="play", track_id=proposal.payload.track_id)
             playlist_key = playlist_for_logical_track(command.track_id)
             path = self._validated_track(ALLOWED_TRACK_ID)
+            if self.delivery_mode == "BROWSER":
+                self._store_browser_delivery(
+                    proposal.action_id,
+                    path.read_bytes(),
+                    "audio/flac",
+                )
+                self.executed_action_ids.append(proposal.action_id)
+                return ActionResult(
+                    action_id=proposal.action_id,
+                    action_type=proposal.action_type,
+                    execution_status=ExecutionStatus.SUCCEEDED,
+                    result={
+                        "mock": False,
+                        "playback_started": False,
+                        "physical_action_performed": False,
+                        "delivery_ready": True,
+                        "delivery_status": "READY",
+                        "track_id": command.track_id,
+                        "playlist_key": playlist_key.value,
+                        "fallback_asset_id": ALLOWED_TRACK_ID,
+                        "network_scope": "LOCAL",
+                        "source": "LOCAL_FALLBACK",
+                        "provider": "LOCAL",
+                        "fetch_scope": "INTERNET" if fetch_invoked else "NOT_INVOKED",
+                        "playback_scope": "BROWSER_LOCAL",
+                        "fallback_used": True,
+                        "fallback_reason": fallback_reason,
+                        "fallback_notice": "EMOTION_PLAYLIST_UNAVAILABLE_USING_LOCAL_CALM_PIANO",
+                        "preview": False,
+                    },
+                    completed_at=now,
+                )
             try:
                 self.backend.play(path)
             except LocalMusicError:
@@ -187,10 +244,40 @@ class LocalMusicPlayer:
         provider_track_id: str,
         size_bytes: int,
         fetch_latency_ms: int,
+        content_type: str,
     ) -> ActionResult:
         with self._lock:
             self._validate_action(proposal, authorization, now)
             playlist_key = playlist_for_logical_track(proposal.payload.track_id)
+            if self.delivery_mode == "BROWSER":
+                self._store_browser_delivery(proposal.action_id, audio, content_type)
+                self.executed_action_ids.append(proposal.action_id)
+                return ActionResult(
+                    action_id=proposal.action_id,
+                    action_type=proposal.action_type,
+                    execution_status=ExecutionStatus.SUCCEEDED,
+                    result={
+                        "mock": False,
+                        "playback_started": False,
+                        "physical_action_performed": False,
+                        "delivery_ready": True,
+                        "delivery_status": "READY",
+                        "track_id": proposal.payload.track_id,
+                        "playlist_key": playlist_key.value,
+                        "provider_track_id": provider_track_id,
+                        "network_scope": "LOCAL",
+                        "source": "AUDIUS_PREVIEW",
+                        "provider": "AUDIUS",
+                        "fetch_scope": "INTERNET",
+                        "playback_scope": "BROWSER_LOCAL",
+                        "fallback_used": False,
+                        "fallback_reason": None,
+                        "preview": True,
+                        "size_bytes": size_bytes,
+                        "fetch_latency_ms": fetch_latency_ms,
+                    },
+                    completed_at=now,
+                )
             try:
                 self.backend.play_memory(audio)
             except LocalMusicError:
@@ -225,7 +312,25 @@ class LocalMusicPlayer:
 
     def close(self) -> None:
         with self._lock:
+            self._browser_deliveries.clear()
             self.backend.close()
+
+    def consume_browser_delivery(self, action_id: str) -> BrowserAudioDelivery | None:
+        with self._lock:
+            return self._browser_deliveries.pop(action_id, None)
+
+    def _store_browser_delivery(
+        self, action_id: str, audio: bytes, content_type: str
+    ) -> None:
+        if not audio or len(audio) > MAX_BROWSER_AUDIO_BYTES:
+            raise LocalMusicError("browser audio delivery size is invalid")
+        if not content_type.startswith("audio/"):
+            raise LocalMusicError("browser audio delivery content type is invalid")
+        while len(self._browser_deliveries) >= MAX_BROWSER_DELIVERIES:
+            self._browser_deliveries.popitem(last=False)
+        self._browser_deliveries[action_id] = BrowserAudioDelivery(
+            audio=bytes(audio), content_type=content_type
+        )
 
     def _validate_action(
         self,

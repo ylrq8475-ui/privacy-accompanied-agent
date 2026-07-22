@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 import unittest
 from collections import deque
 from datetime import datetime, timezone
@@ -15,7 +16,7 @@ from external_connector.client import (
     RemoteWeatherConnector,
 )
 from external_connector.service import ExternalConnectorASGIApp
-from external_connector.weather import RealExternalConnector
+from external_connector.weather import ExternalConnectorTransportError, RealExternalConnector
 from backend.app.schemas.music import PlaylistKey
 from tests.helpers import connector_request
 from tests.phase4.helpers import FakeWeatherTransport
@@ -116,6 +117,35 @@ class ConnectorServiceTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(status, 400)
         self.assertEqual(json.loads(raw)["error"], "INVALID_JSON")
+
+    async def test_slow_provider_call_does_not_block_health(self) -> None:
+        started = threading.Event()
+        release = threading.Event()
+
+        class BlockingWeather:
+            def send(self, raw_request):
+                started.set()
+                release.wait(timeout=2)
+                raise ExternalConnectorTransportError("synthetic slow provider")
+
+        app = ExternalConnectorASGIApp(
+            weather=BlockingWeather(),  # type: ignore[arg-type]
+            audius=AudiusMusicConnector(AudiusSettings(False, "", "", {}, False)),
+        )
+        provider_task = asyncio.create_task(
+            raw_request(app, "POST", "/v1/weather", connector_request())
+        )
+        self.assertTrue(await asyncio.to_thread(started.wait, 1))
+        try:
+            status, _, raw = await asyncio.wait_for(
+                raw_request(app, "GET", "/health"), timeout=0.25
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(raw)["status"], "READY")
+        finally:
+            release.set()
+        provider_status, _, _ = await asyncio.wait_for(provider_task, timeout=1)
+        self.assertEqual(provider_status, 502)
 
 
 class FakeInternalTransport:

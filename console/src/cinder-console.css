@@ -1244,6 +1244,23 @@ body {
   line-height: 1.5;
 }
 
+.music-browser-player {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.music-browser-player audio {
+  width: 100%;
+  min-height: 2.5rem;
+  accent-color: var(--accent, #d36a32);
+}
+
+.music-browser-player small {
+  color: var(--text-secondary, #5f615b);
+  line-height: 1.45;
+}
+
 @media (max-width: 720px) {
   .music-category-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
