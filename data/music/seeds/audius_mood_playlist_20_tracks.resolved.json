@@ -521,6 +521,24 @@
       "bv6MO"
     ]
   },
+  "playback_pools": {
+    "RELAX": [
+      "32YZxaE",
+      "Zb7d39a"
+    ],
+    "COMFORT": [
+      "Zb7d39a"
+    ],
+    "UPLIFT": [
+      "Zb7d39a"
+    ],
+    "COOLDOWN": [
+      "32YZxaE"
+    ],
+    "NEUTRAL": [
+      "32YZxaE"
+    ]
+  },
   "failures": [
     {
       "catalog_id": "AUD-MOOD-004",

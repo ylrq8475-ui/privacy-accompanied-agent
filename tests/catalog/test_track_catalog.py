@@ -172,6 +172,7 @@ class CatalogStoreTests(unittest.TestCase):
         first = seed_store(self.store, manifest)
         second = seed_store(self.store, manifest)
         self.assertEqual(first["resolved_track_count"], 13)
+        self.assertEqual(first["playback_verified_track_count"], 2)
         self.assertEqual(
             set(first["updated_categories"]),
             {item.value for item in PlaylistKey},
@@ -192,6 +193,19 @@ class CatalogStoreTests(unittest.TestCase):
                 "UPLIFT": 4,
                 "COOLDOWN": 2,
                 "NEUTRAL": 7,
+            },
+        )
+        ready_counts = {
+            item["key"]: item["ready_count"] for item in catalog["categories"]
+        }
+        self.assertEqual(
+            ready_counts,
+            {
+                "RELAX": 2,
+                "COMFORT": 1,
+                "UPLIFT": 1,
+                "COOLDOWN": 1,
+                "NEUTRAL": 1,
             },
         )
         active_ids = {

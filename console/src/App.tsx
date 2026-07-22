@@ -1918,6 +1918,7 @@ function App() {
             </div>
             <p className="music-privacy-copy">
               Agent 只选择情绪类别；曲目 ID 由本地目录轮转，原始对话和情绪历史不会发送给 Audius。
+              数字表示“当前网络实测可播 / 人工筛选候选”。
             </p>
             <div className="music-category-tabs" role="tablist" aria-label="音乐种子分类">
               {(musicCatalog?.categories ?? []).map((category) => (
