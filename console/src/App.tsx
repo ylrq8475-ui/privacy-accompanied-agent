@@ -1311,6 +1311,24 @@ function App() {
                   testId="music-action-id"
                 />
               )}
+              {session?.music_action && (
+                <div
+                  className="music-browser-player chat-music-player"
+                  data-testid="chat-music-player"
+                >
+                  <audio
+                    ref={musicPlayerRef}
+                    controls
+                    preload="none"
+                    src={musicAudioUrl ?? undefined}
+                    onPlay={() => setMusicPlaybackStatus("????????")}
+                    onEnded={() => setMusicPlaybackStatus("??????????????")}
+                  />
+                  <small>
+                    {musicPlaybackStatus ?? "????????????????????"}
+                  </small>
+                </div>
+              )}
               {session?.ac_action && !conversation.acDecision && (
                 <ActionCard
                   compact
