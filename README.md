@@ -397,3 +397,16 @@ python -m scripts.phase5_acceptance --samples 20
 - [天气与动作边界](docs/PHASE_4_NETWORK_ACTIONS.md)
 - [Phase 5 验收方法](docs/PHASE_5_TESTING.md)
 - [情绪反应、Policy 与隐私安全记忆](docs/EMOTION_REACTION_MEMORY.md)
+
+- ## 开源许可
+
+本项目团队自行开发的源代码采用
+[Apache License 2.0](./LICENSE) 开源。
+
+本项目使用的 Step3、Step3-VL、Step-Audio、NVIDIA 容器、
+Audius 音乐服务、Open-Meteo 数据以及其他第三方依赖，
+继续遵循其各自的许可证、模型卡和服务条款。
+
+第三方技术和素材的详细归属说明见：
+
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
