@@ -16,6 +16,36 @@
 | 恢复 | 重启后协调 Action 状态，但不会自动执行待处理动作 |
 
 Step3 只提供状态假设、推荐和澄清候选，不能授权或执行动作。音乐与 AC 使用不同的 `action_id`，必须分别授权。
+## 技术栈
+
+| 类别 | 技术 | 项目用途 | 许可与归属 |
+| --- | --- | --- | --- |
+| 本地算力平台 | NVIDIA DGX Spark | 运行多模态、音频模型及智能体后端服务 | NVIDIA |
+| 推理容器 | NVIDIA NGC vLLM 26.06 | 提供 ARM64 GPU 推理与 Python 运行环境 | 遵循 NVIDIA 对应许可 |
+| 多模态模型 | Step3 / Step3-VL | 场景理解、文本状态分析、状态候选和回复生成 | StepFun 阶跃星辰，遵循官方许可 |
+| 音频模型 | Step-Audio | 语音识别、语音合成与回复朗读 | StepFun 阶跃星辰，模型许可以具体模型卡为准 |
+| 后端框架 | Python、Uvicorn、Pydantic | API 服务、严格 Schema 校验、状态机和授权策略 | 各自开源许可证 |
+| 图像处理 | OpenCV | 读取和处理演示场景图片 | Apache-2.0 |
+| 音频处理 | miniaudio | 音频格式校验和本地音频处理 | 原项目许可证 |
+| 数据存储 | SQLite | 保存确认后的偏好、脱敏摘要、动作和审计记录 | 公共领域 |
+| 前端 | React、TypeScript、Vite | 对话控制台、授权界面和审计页面 | 各自开源许可证 |
+| 自动化测试 | Python unittest、Vitest | 后端、前端和端到端功能测试 | 各自开源许可证 |
+| 容器部署 | Docker、Docker Compose | 在 DGX Spark 上部署独立服务 | 各自许可 |
+| 安全访问 | SSH Loopback Tunnel | 不开放 DGX 公网端口，通过本机回环访问控制台 | OpenSSH 相关许可 |
+| 天气服务 | Open-Meteo | 获取天气信息并辅助确定性策略 | 遵循 Open-Meteo 条款 |
+| 音乐服务 | Audius | 获取用户授权后的公开音乐预览 | 遵循 Audius 条款 |
+
+### 核心模块分工
+
+- `Step3-VL`：负责场景理解、状态分析和回复生成，不负责授权或执行。
+- `Step-Audio`：负责 ASR、TTS 和语音回复能力。
+- `Policy Engine`：根据用户确认状态和固定规则决定是否提出动作。
+- `Authorization Manager`：管理音乐和空调的独立授权状态。
+- `Privacy Guard`：检查外发字段，阻止原始对话、图像、音频和长期记忆离开本地。
+- `external-connector`：作为天气和音乐服务的唯一公网出口。
+- `Track Catalog`：在本地管理 Audius 曲目 ID、情绪分类和曲目轮转。
+- `React Console`：展示对话、状态确认、动作授权、音乐播放和审计信息。
+
 
 ## 环境要求
 
