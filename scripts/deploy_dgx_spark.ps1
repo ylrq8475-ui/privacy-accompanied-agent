@@ -100,6 +100,15 @@ try {
         Copy-Item -LiteralPath $Source -Destination $Destination
     }
 
+    # Windows checkouts may contain CRLF shell scripts; remote /bin/sh requires LF.
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    Get-ChildItem -LiteralPath $StagingPath -Recurse -File -Filter "*.sh" |
+        ForEach-Object {
+            $Content = [System.IO.File]::ReadAllText($_.FullName)
+            $Normalized = $Content.Replace("`r`n", "`n").Replace("`r", "`n")
+            [System.IO.File]::WriteAllText($_.FullName, $Normalized, $Utf8NoBom)
+        }
+
     $Forbidden = Get-ChildItem -LiteralPath $StagingPath -Recurse -File | Where-Object {
         (($_.Name -match '^\.env') -and $_.Name -ne '.env.example') -or
         $_.Name -match '(\.sqlite3($|-)|audius_playlists\.local\.json$)' -or

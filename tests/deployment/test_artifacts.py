@@ -30,6 +30,8 @@ class DeploymentArtifactTests(unittest.TestCase):
         self.assertIn("$SafeFiles", script)
         self.assertIn("audius_playlists\\.local\\.json", script)
         self.assertIn('"docker-compose.dgx.audius-sync.yml"', script)
+        self.assertIn('Filter "*.sh"', script)
+        self.assertIn('.Replace("`r`n", "`n")', script)
         self.assertIn("\\.sqlite3", script)
         self.assertNotIn('"data/demo.sqlite3"', script)
         self.assertNotIn("docker compose down", script)
